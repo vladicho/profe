@@ -10,6 +10,7 @@ Analizador experimental de trayectoria para **frontón** y **ráquetbol**, dispo
 - rastrea hasta 12 segundos cuadro a cuadro;
 - detecta finales de cada punto y crea recortes para revisión;
 - exporta cada recorte como un short vertical generado en el navegador;
+- incluye un tutorial visual de Frontón de 36 segundos en español y portugués;
 - dibuja la trayectoria y estima el punto de impacto;
 - permite correcciones manuales.
 

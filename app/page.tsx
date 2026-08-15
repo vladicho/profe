@@ -34,7 +34,9 @@ const COPY = {
     detected:"finales encontrados", noClips:"No se encontraron finales claros. Puedes analizar el video desde el punto actual.",
     finalizations:"FINALES DE CADA PUNTO", finalizationsTitle:"Elige una jugada.", play:"Ver", analyzeClip:"Analizar", clipSelected:"Jugada seleccionada. Pausa y toca el centro de la pelota.",
     estimate:"Detección automática: confirma cada recorte antes del análisis.", markFinal:"Marcar final ahora", marked:"Final marcado manualmente.",
-    downloadShort:"Descargar short", exportingShort:"Creando short…", shortReady:"Short guardado en tu dispositivo.", exportUnsupported:"Este navegador no permite crear el short. Prueba con Edge o Chrome actualizado.", rally:"JUGADA"
+    downloadShort:"Descargar short", exportingShort:"Creando short…", shortReady:"Short guardado en tu dispositivo.", exportUnsupported:"Este navegador no permite crear el short. Prueba con Edge o Chrome actualizado.", rally:"JUGADA",
+    tutorial:"TUTORIAL EN VIDEO", tutorialTitle:"Mira el proceso completo.", tutorialIntro:"Un recorrido visual, sin saltos, desde el video original hasta la trayectoria y el short.", tutorialPlay:"Reproducir tutorial de Frontón",
+    tutorialSteps:["Elige Frontón y sube un archivo permitido.","Pulsa Detectar finales y espera el análisis.","Elige una jugada y pulsa Analizar.","Marca las cuatro esquinas en el orden indicado.","Pausa y toca exactamente el centro de la pelota.","Inicia el rastreo, revisa la línea y descarga el short."]
   },
   pt: {
     private:"análise local e privada", eyebrow:"VISÃO COMPUTACIONAL PARA ESPORTES DE PAREDE",
@@ -60,7 +62,9 @@ const COPY = {
     detected:"finalizações encontradas", noClips:"Não encontrei finalizações claras. Você ainda pode analisar o vídeo a partir do ponto atual.",
     finalizations:"FINALIZAÇÕES DE CADA LANCE", finalizationsTitle:"Escolha uma jogada.", play:"Ver", analyzeClip:"Analisar", clipSelected:"Jogada selecionada. Pause e toque no centro da bola.",
     estimate:"Detecção automática: confirme cada recorte antes da análise.", markFinal:"Marcar final agora", marked:"Finalização marcada manualmente.",
-    downloadShort:"Baixar short", exportingShort:"Criando short…", shortReady:"Short salvo no seu aparelho.", exportUnsupported:"Este navegador não consegue criar o short. Tente com Edge ou Chrome atualizado.", rally:"LANCE"
+    downloadShort:"Baixar short", exportingShort:"Criando short…", shortReady:"Short salvo no seu aparelho.", exportUnsupported:"Este navegador não consegue criar o short. Tente com Edge ou Chrome atualizado.", rally:"LANCE",
+    tutorial:"TUTORIAL EM VÍDEO", tutorialTitle:"Veja o processo completo.", tutorialIntro:"Um passo a passo visual, sem pular etapas, do vídeo original até a trajetória e o short.", tutorialPlay:"Reproduzir tutorial de Frontón",
+    tutorialSteps:["Escolha Frontón e envie um arquivo permitido.","Toque em Detectar finalizações e aguarde.","Escolha um lance e toque em Analisar.","Marque os quatro cantos na ordem mostrada.","Pause e toque exatamente no centro da bola.","Inicie o rastreamento, confira a linha e baixe o short."]
   }
 };
 
@@ -242,6 +246,10 @@ export default function Home() {
   return <main>
     <nav><a href="#top" className="logo"><i/>PROFE</a><div className="navTools"><span><b/> {c.private}</span><div className="language"><button className={lang==="es"?"on":""} onClick={()=>language("es")}>ES</button><button className={lang==="pt"?"on":""} onClick={()=>language("pt")}>PT</button></div></div></nav>
     <header id="top" className="hero"><div><p className="eyebrow">{c.eyebrow}</p><h1>{c.headline}</h1><p>{c.hero}</p></div><div className="courtArt"><i/><b/><em/></div></header>
+    <section className="tutorial">
+      <div className="tutorialCopy"><p className="eyebrow blue">{c.tutorial}</p><h2>{c.tutorialTitle}</h2><p>{c.tutorialIntro}</p><ol>{c.tutorialSteps.map((step,index)=><li key={step}><b>{String(index+1).padStart(2,"0")}</b><span>{step}</span></li>)}</ol></div>
+      <div className="tutorialVideo"><video key={lang} controls playsInline preload="metadata" poster="/tutorial-poster.svg"><source src={`/tutorial-fronton-${lang}.mp4`} type="video/mp4"/>{c.tutorialPlay}</video><span>{c.tutorialPlay} · 00:36</span></div>
+    </section>
     <section className="lab">
       <div className="title"><div><p className="eyebrow blue">{c.center}</p><h2>{c.review}</h2></div><small>{c.time}</small></div>
       {!sport?<div className="sportPick"><h3>{c.choose}</h3><div><button onClick={()=>{setSport("fronton");setMessage(c.initial)}}><span>F</span><strong>{c.fronton}</strong><small>{c.frontonText}</small></button><button onClick={()=>{setSport("racquetball");setMessage(c.initial)}}><span>R</span><strong>{c.racquetball}</strong><small>{c.racquetText}</small></button></div></div>:

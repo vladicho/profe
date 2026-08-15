@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#061420"/>
+  <path d="M96 588h1088M220 500l220-300h400l220 300zM440 200v300M840 200v300" fill="none" stroke="#405563" stroke-width="8"/>
+  <path d="M410 396h460" stroke="#c9ff36" stroke-width="10"/>
+  <circle cx="842" cy="270" r="20" fill="#c9ff36"/>
+  <circle cx="640" cy="350" r="82" fill="#075df8"/>
+  <path d="M618 304l75 46-75 46z" fill="white"/>
+  <circle cx="96" cy="83" r="13" fill="#c9ff36"/>
+  <text x="126" y="96" fill="white" font-family="Arial" font-size="44" font-weight="900" letter-spacing="6">PROFE</text>
+  <text x="96" y="650" fill="white" font-family="Arial" font-size="36" font-weight="800">TUTORIAL · FRONTÓN</text>
+</svg>
