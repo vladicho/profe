@@ -8,6 +8,7 @@ Analizador experimental de trayectoria para **frontón** y **ráquetbol**, dispo
 - calibra la cancha con cuatro puntos;
 - selecciona la pelota por color;
 - rastrea hasta 12 segundos cuadro a cuadro;
+- detecta finales de cada punto y crea recortes para revisión;
 - dibuja la trayectoria y estima el punto de impacto;
 - permite correcciones manuales.
 
