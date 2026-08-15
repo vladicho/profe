@@ -6,6 +6,8 @@ type P = { x:number; y:number; t:number };
 type Stage = "court" | "ball" | "ready" | "tracking" | "done";
 type Lang = "es" | "pt";
 type Sport = "fronton" | "racquetball";
+type MotionSample = { time:number; score:number };
+type RallyClip = { id:number; start:number; end:number; confidence:number };
 
 const COPY = {
   es: {
@@ -28,7 +30,10 @@ const COPY = {
     ball:"2. Pausa al comienzo de la jugada y toca el centro de la pelota.", selected:"Pelota seleccionada. Ahora inicia el rastreo.",
     corrected:"Punto corregido manualmente.", tracing:"Rastreando la pelota…", complete:"Análisis terminado. Revisa el mapa del impacto.",
     again:"Marca nuevamente las cuatro esquinas.", linkMessage:"Los enlaces directos requieren autorización de las plataformas. Descarga un video permitido y sube el archivo.",
-    changeSport:"Cambiar deporte"
+    changeSport:"Cambiar deporte", detect:"Detectar finales", detectHelp:"Busca pausas y cambios de movimiento entre los puntos.", detecting:"Buscando finales…",
+    detected:"finales encontrados", noClips:"No se encontraron finales claros. Puedes analizar el video desde el punto actual.",
+    finalizations:"FINALES DE CADA PUNTO", finalizationsTitle:"Elige una jugada.", play:"Ver", analyzeClip:"Analizar", clipSelected:"Jugada seleccionada. Pausa y toca el centro de la pelota.",
+    estimate:"Detección automática: confirma cada recorte antes del análisis.", markFinal:"Marcar final ahora", marked:"Final marcado manualmente."
   },
   pt: {
     private:"análise local e privada", eyebrow:"VISÃO COMPUTACIONAL PARA ESPORTES DE PAREDE",
@@ -50,7 +55,10 @@ const COPY = {
     ball:"2. Pause no começo da jogada e toque no centro da bola.", selected:"Bola selecionada. Agora inicie o rastreamento.",
     corrected:"Ponto corrigido manualmente.", tracing:"Rastreando a bola…", complete:"Análise concluída. Confira o mapa do impacto.",
     again:"Marque novamente os quatro cantos.", linkMessage:"Links diretos dependem da autorização das plataformas. Baixe um vídeo permitido e envie o arquivo.",
-    changeSport:"Trocar esporte"
+    changeSport:"Trocar esporte", detect:"Detectar finalizações", detectHelp:"Procura pausas e mudanças de movimento entre os pontos.", detecting:"Procurando finalizações…",
+    detected:"finalizações encontradas", noClips:"Não encontrei finalizações claras. Você ainda pode analisar o vídeo a partir do ponto atual.",
+    finalizations:"FINALIZAÇÕES DE CADA LANCE", finalizationsTitle:"Escolha uma jogada.", play:"Ver", analyzeClip:"Analisar", clipSelected:"Jogada selecionada. Pause e toque no centro da bola.",
+    estimate:"Detecção automática: confirme cada recorte antes da análise.", markFinal:"Marcar final agora", marked:"Finalização marcada manualmente."
   }
 };
 
@@ -69,6 +77,9 @@ export default function Home() {
   const [progress,setProgress]=useState(0);
   const [lang,setLang]=useState<Lang>("es");
   const [sport,setSport]=useState<Sport|null>(null);
+  const [clips,setClips]=useState<RallyClip[]>([]);
+  const [selectedClip,setSelectedClip]=useState<RallyClip|null>(null);
+  const [detecting,setDetecting]=useState(false);
   const c=COPY[lang];
 
   function draw(){
@@ -95,8 +106,53 @@ export default function Home() {
 
   function upload(e:ChangeEvent<HTMLInputElement>){
     const f=e.target.files?.[0];if(!f)return;
-    if(src)URL.revokeObjectURL(src);setSrc(URL.createObjectURL(f));setCourt([]);setPath([]);setRgb(null);setStage("court");setProgress(0);
+    if(src)URL.revokeObjectURL(src);setSrc(URL.createObjectURL(f));setCourt([]);setPath([]);setRgb(null);setClips([]);setSelectedClip(null);setStage("court");setProgress(0);
     setMessage(c.corners);
+  }
+  async function seek(v:HTMLVideoElement,time:number){
+    if(Math.abs(v.currentTime-time)<.03)return;
+    await new Promise<void>((resolve,reject)=>{
+      const done=()=>{cleanup();resolve()},fail=()=>{cleanup();reject(new Error("seek failed"))};
+      const cleanup=()=>{v.removeEventListener("seeked",done);v.removeEventListener("error",fail)};
+      v.addEventListener("seeked",done);v.addEventListener("error",fail);v.currentTime=time;
+    });
+  }
+  async function detectRallies(){
+    const source=video.current;if(!source||!Number.isFinite(source.duration)||source.duration<3)return;
+    setDetecting(true);setProgress(0);setMessage(c.detecting);source.pause();
+    const scan=document.createElement("video");scan.src=src;scan.muted=true;scan.preload="auto";scan.playsInline=true;
+    try{
+      if(scan.readyState<2)await new Promise<void>((resolve,reject)=>{scan.addEventListener("loadeddata",()=>resolve(),{once:true});scan.addEventListener("error",()=>reject(new Error("video load failed")),{once:true})});
+      const canvas=document.createElement("canvas");canvas.width=96;canvas.height=54;
+      const x=canvas.getContext("2d",{willReadFrequently:true})!,duration=scan.duration;
+      const interval=Math.min(2,Math.max(.5,duration/900)),samples:MotionSample[]=[];let previous:Uint8ClampedArray|null=null;
+      for(let time=0,index=0;time<duration-.05;time+=interval,index++){
+        await seek(scan,time);x.drawImage(scan,0,0,canvas.width,canvas.height);
+        const pixels=x.getImageData(0,0,canvas.width,canvas.height).data,gray=new Uint8ClampedArray(canvas.width*canvas.height);
+        let difference=0;
+        for(let i=0,j=0;i<pixels.length;i+=4,j++){gray[j]=(pixels[i]*3+pixels[i+1]*6+pixels[i+2])/10;if(previous)difference+=Math.abs(gray[j]-previous[j])}
+        if(previous)samples.push({time,score:difference/gray.length});previous=gray;
+        if(index%6===0)setProgress(Math.min(99,time/duration*100));
+      }
+      const found=finalizationClips(samples,duration,interval);setClips(found);setSelectedClip(null);setProgress(100);
+      setMessage(found.length?`${found.length} ${c.detected}.`:c.noClips);
+    }catch{setClips([]);setMessage(c.noClips)}finally{scan.removeAttribute("src");scan.load();setDetecting(false)}
+  }
+  function previewClip(clip:RallyClip){
+    const v=video.current;if(!v)return;setSelectedClip(clip);v.currentTime=clip.start;v.play().catch(()=>{});setMessage(`${formatTime(clip.start)} — ${formatTime(clip.end)}`);
+  }
+  function markFinal(){
+    const v=video.current;if(!v)return;v.pause();const time=v.currentTime;
+    const clip={id:Date.now(),start:Math.max(0,time-5),end:Math.min(v.duration,time+2),confidence:1};
+    setClips(old=>[...old.filter(item=>Math.abs((item.start+5)-time)>2),clip].sort((a,b)=>a.start-b.start));setSelectedClip(clip);setMessage(c.marked);
+  }
+  function analyzeClip(clip:RallyClip){
+    const v=video.current;if(!v)return;v.pause();v.currentTime=clip.start;setSelectedClip(clip);setPath([]);setRgb(null);setProgress(0);
+    if(court.length===4){setStage("ball");setMessage(c.clipSelected)}else{setStage("court");setMessage(c.corners)}
+  }
+  function videoTime(){
+    const v=video.current;if(!v)return;draw();
+    if(selectedClip&&stage!=="tracking"&&v.currentTime>=selectedClip.end-.03)v.pause();
   }
   function point(e:MouseEvent<HTMLCanvasElement>):P{
     const v=video.current!,r=e.currentTarget.getBoundingClientRect();
@@ -129,7 +185,7 @@ export default function Home() {
     const v=video.current;if(!v||!rgb||!path.length)return;
     setStage("tracking");setMessage(c.tracing);v.pause();
     const c=document.createElement("canvas");c.width=v.videoWidth;c.height=v.videoHeight;const x=c.getContext("2d",{willReadFrequently:true})!;
-    const pts=[...path],start=v.currentTime,end=Math.min(v.duration,start+12);
+    const pts=[...path],start=v.currentTime,end=Math.min(v.duration,selectedClip?.end??start+12);
     const step=()=>{
       if(v.currentTime>=end||v.ended){setPath([...pts]);setStage("done");setProgress(100);setMessage(c.complete);return}
       x.drawImage(v,0,0);const found=find(x.getImageData(0,0,c.width,c.height),rgb,pts.at(-1)!,c.width,c.height);
@@ -154,18 +210,20 @@ export default function Home() {
       !src?<><div className="sportBar"><b>{sport==="fronton"?c.fronton:c.racquetball}</b><button onClick={()=>setSport(null)}>{c.changeSport}</button></div><div className="sources">
         <button className="upload" onClick={()=>picker.current?.click()}><span>↑</span><strong>{c.upload}</strong><small>{c.uploadHelp}</small></button>
         <div className="external"><strong>{c.videoLink}</strong><div><input value={link} onChange={e=>setLink(e.target.value)} placeholder="YouTube ou Facebook"/><button onClick={()=>setMessage(c.linkMessage)}>{c.useLink}</button></div><small>{c.linkHelp}</small></div>
-      </div></>:<div className="analyzer">
-        <div className="screen"><video ref={video} src={src} controls playsInline onLoadedMetadata={draw} onTimeUpdate={draw}/><canvas ref={overlay} onClick={clickVideo}/><div className="screenStatus"><span>{message}</span><b>{Math.round(progress)}%</b></div><i className="bar" style={{width:progress+"%"}}/></div>
+      </div></>:<><div className="analyzer">
+        <div className="screen"><video ref={video} src={src} controls playsInline onLoadedMetadata={draw} onTimeUpdate={videoTime}/><canvas ref={overlay} onClick={clickVideo}/><div className="screenStatus"><span>{message}</span><b>{Math.round(progress)}%</b></div><i className="bar" style={{width:progress+"%"}}/></div>
         <aside>
           <div className="activeSport">{sport==="fronton"?c.fronton:c.racquetball}</div>
+          <div className="detectActions"><button className="detect" disabled={detecting||stage==="tracking"} onClick={detectRallies}>{detecting?c.detecting:c.detect}</button><button className="markFinal" disabled={detecting||stage==="tracking"} onClick={markFinal}>{c.markFinal}</button></div>
+          <small className="detectHelp">{c.detectHelp}</small>
           <Step n="01" title={c.calibrate} text={c.calibrateHelp} active={stage==="court"} done={court.length===4} tag={court.length+"/4"}/>
           <Step n="02" title={c.selectBall} text={c.selectHelp} active={stage==="ball"} done={!!rgb}/>
           <Step n="03" title={c.tracking} text={c.trackingHelp} active={stage==="ready"||stage==="tracking"} done={stage==="done"}/>
           <button className="primary" disabled={!rgb||stage==="tracking"} onClick={track}>{stage==="tracking"?c.analyzing:c.start}</button>
           <button className="secondary" onClick={restart}>{c.restart}</button>
-          <button className="linkBtn" onClick={()=>setSrc("")}>{c.another}</button>
+          <button className="linkBtn" onClick={()=>{setSrc("");setClips([]);setSelectedClip(null)}}>{c.another}</button>
         </aside>
-      </div>}
+      </div>{clips.length>0&&<div className="clips"><div className="clipsHead"><div><p className="eyebrow blue">{c.finalizations}</p><h3>{c.finalizationsTitle}</h3></div><small>{c.estimate}</small></div><div className="clipGrid">{clips.map((clip,i)=><article className={selectedClip?.id===clip.id?"selected":""} key={clip.id}><b>{String(i+1).padStart(2,"0")}</b><div><strong>{formatTime(clip.start)} — {formatTime(clip.end)}</strong><small>{Math.round(clip.confidence*100)}% {c.confidence.toLowerCase()}</small></div><button onClick={()=>previewClip(clip)}>{c.play}</button><button className="analyzeClip" onClick={()=>analyzeClip(clip)}>{c.analyzeClip}</button></article>)}</div></div>}</>}
       <input ref={picker} hidden type="file" accept="video/mp4,video/webm,video/quicktime" onChange={upload}/><p className="notice">{message}</p>
     </section>
     {path.length>1&&<section className="result">
@@ -179,3 +237,20 @@ export default function Home() {
 function Step({n,title,text,active,done,tag}:{n:string,title:string,text:string,active:boolean,done:boolean,tag?:string}){return <div className={`step ${active?"active":""} ${done?"done":""}`}><b>{n}</b><div><strong>{title}</strong><small>{text}</small></div>{tag&&<em>{tag}</em>}</div>}
 function Metric({label,value}:{label:string,value:string}){return <div><small>{label}</small><strong>{value}</strong></div>}
 function Info({n,title,text}:{n:string,title:string,text:string}){return <article><b>{n}</b><h3>{title}</h3><p>{text}</p></article>}
+
+function formatTime(seconds:number){const safe=Math.max(0,seconds),minutes=Math.floor(safe/60),rest=Math.floor(safe%60);return `${minutes}:${String(rest).padStart(2,"0")}`}
+
+function finalizationClips(samples:MotionSample[],duration:number,interval:number):RallyClip[]{
+  if(samples.length<4)return[];
+  const sorted=samples.map(sample=>sample.score).sort((a,b)=>a-b);
+  const percentile=(value:number)=>sorted[Math.min(sorted.length-1,Math.floor(sorted.length*value))];
+  const quiet=percentile(.5),busy=percentile(.88),threshold=Math.max(3.5,quiet+(busy-quiet)*.38);
+  const active=samples.filter(sample=>sample.score>=threshold);if(active.length<3)return[];
+  const groups:{start:number;end:number;scores:number[]}[]=[];
+  for(const sample of active){const last=groups.at(-1);if(!last||sample.time-last.end>Math.max(3.2,interval*2.5))groups.push({start:sample.time,end:sample.time,scores:[sample.score]});else{last.end=sample.time;last.scores.push(sample.score)}}
+  const candidates=groups.filter(group=>group.end-group.start>=Math.max(1.2,interval*1.5)&&group.scores.length>=3).map(group=>{
+    const end=Math.min(duration,group.end+interval),strength=group.scores.reduce((sum,value)=>sum+value,0)/group.scores.length;
+    return{end,strength};
+  }).filter((item,index,list)=>index===0||item.end-list[index-1].end>=6).slice(0,30);
+  return candidates.map((item,id)=>({id:id+1,start:Math.max(0,item.end-5),end:Math.min(duration,item.end+2),confidence:Math.max(.45,Math.min(.96,(item.strength-threshold)/Math.max(1,busy-threshold)*.35+.58))}));
+}
