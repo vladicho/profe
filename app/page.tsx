@@ -33,7 +33,8 @@ const COPY = {
     changeSport:"Cambiar deporte", detect:"Detectar finales", detectHelp:"Busca pausas y cambios de movimiento entre los puntos.", detecting:"Buscando finales…",
     detected:"finales encontrados", noClips:"No se encontraron finales claros. Puedes analizar el video desde el punto actual.",
     finalizations:"FINALES DE CADA PUNTO", finalizationsTitle:"Elige una jugada.", play:"Ver", analyzeClip:"Analizar", clipSelected:"Jugada seleccionada. Pausa y toca el centro de la pelota.",
-    estimate:"Detección automática: confirma cada recorte antes del análisis.", markFinal:"Marcar final ahora", marked:"Final marcado manualmente."
+    estimate:"Detección automática: confirma cada recorte antes del análisis.", markFinal:"Marcar final ahora", marked:"Final marcado manualmente.",
+    downloadShort:"Descargar short", exportingShort:"Creando short…", shortReady:"Short guardado en tu dispositivo.", exportUnsupported:"Este navegador no permite crear el short. Prueba con Edge o Chrome actualizado.", rally:"JUGADA"
   },
   pt: {
     private:"análise local e privada", eyebrow:"VISÃO COMPUTACIONAL PARA ESPORTES DE PAREDE",
@@ -58,7 +59,8 @@ const COPY = {
     changeSport:"Trocar esporte", detect:"Detectar finalizações", detectHelp:"Procura pausas e mudanças de movimento entre os pontos.", detecting:"Procurando finalizações…",
     detected:"finalizações encontradas", noClips:"Não encontrei finalizações claras. Você ainda pode analisar o vídeo a partir do ponto atual.",
     finalizations:"FINALIZAÇÕES DE CADA LANCE", finalizationsTitle:"Escolha uma jogada.", play:"Ver", analyzeClip:"Analisar", clipSelected:"Jogada selecionada. Pause e toque no centro da bola.",
-    estimate:"Detecção automática: confirme cada recorte antes da análise.", markFinal:"Marcar final agora", marked:"Finalização marcada manualmente."
+    estimate:"Detecção automática: confirme cada recorte antes da análise.", markFinal:"Marcar final agora", marked:"Finalização marcada manualmente.",
+    downloadShort:"Baixar short", exportingShort:"Criando short…", shortReady:"Short salvo no seu aparelho.", exportUnsupported:"Este navegador não consegue criar o short. Tente com Edge ou Chrome atualizado.", rally:"LANCE"
   }
 };
 
@@ -80,6 +82,7 @@ export default function Home() {
   const [clips,setClips]=useState<RallyClip[]>([]);
   const [selectedClip,setSelectedClip]=useState<RallyClip|null>(null);
   const [detecting,setDetecting]=useState(false);
+  const [exporting,setExporting]=useState<number|null>(null);
   const c=COPY[lang];
 
   function draw(){
@@ -149,6 +152,41 @@ export default function Home() {
   function analyzeClip(clip:RallyClip){
     const v=video.current;if(!v)return;v.pause();v.currentTime=clip.start;setSelectedClip(clip);setPath([]);setRgb(null);setProgress(0);
     if(court.length===4){setStage("ball");setMessage(c.clipSelected)}else{setStage("court");setMessage(c.corners)}
+  }
+  async function exportShort(clip:RallyClip,index:number){
+    if(exporting!==null)return;
+    if(typeof MediaRecorder==="undefined"||!("captureStream" in HTMLCanvasElement.prototype)){setMessage(c.exportUnsupported);return}
+    setExporting(clip.id);setProgress(0);setMessage(c.exportingShort);
+    const playback=document.createElement("video");playback.src=src;playback.preload="auto";playback.playsInline=true;playback.muted=true;
+    try{
+      if(playback.readyState<2)await new Promise<void>((resolve,reject)=>{playback.addEventListener("loadeddata",()=>resolve(),{once:true});playback.addEventListener("error",()=>reject(new Error("video load failed")),{once:true})});
+      await seek(playback,clip.start);
+      const canvas=document.createElement("canvas");canvas.width=540;canvas.height=960;
+      const x=canvas.getContext("2d")!,stream=canvas.captureStream(30);
+      const captured=(playback as HTMLVideoElement&{captureStream?:()=>MediaStream}).captureStream?.();
+      captured?.getAudioTracks().forEach(track=>stream.addTrack(track));
+      const types=["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm","video/mp4"];
+      const mime=types.find(type=>MediaRecorder.isTypeSupported(type));
+      const recorder=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:3_500_000}:{videoBitsPerSecond:3_500_000});
+      const chunks:BlobPart[]=[];recorder.addEventListener("dataavailable",event=>{if(event.data.size)chunks.push(event.data)});
+      const stopped=new Promise<void>((resolve,reject)=>{recorder.addEventListener("stop",()=>resolve(),{once:true});recorder.addEventListener("error",()=>reject(new Error("recording failed")),{once:true})});
+      let frame=0;const points=path.filter(point=>point.t>=clip.start&&point.t<=clip.end);
+      const drawShort=()=>{
+        x.fillStyle="#061420";x.fillRect(0,0,canvas.width,canvas.height);
+        const scale=Math.min(canvas.width/playback.videoWidth,(canvas.height-180)/playback.videoHeight),width=playback.videoWidth*scale,height=playback.videoHeight*scale,left=(canvas.width-width)/2,top=(canvas.height-height)/2;
+        x.drawImage(playback,left,top,width,height);
+        if(points.length>1){x.strokeStyle="#c9ff36";x.lineWidth=5;x.lineCap="round";x.beginPath();points.filter(point=>point.t<=playback.currentTime+.08).forEach((point,i)=>{const px=left+point.x*scale,py=top+point.y*scale;if(i)x.lineTo(px,py);else x.moveTo(px,py)});x.stroke()}
+        x.fillStyle="#c9ff36";x.beginPath();x.arc(32,42,8,0,Math.PI*2);x.fill();x.fillStyle="white";x.font="900 25px Arial";x.fillText("PROFE",52,50);
+        x.fillStyle="#c9ff36";x.font="800 16px Arial";x.textAlign="right";x.fillText(sport==="fronton"?c.fronton.toUpperCase():c.racquetball.toUpperCase(),canvas.width-26,48);x.textAlign="left";
+        x.fillStyle="#ffffff";x.font="900 28px Arial";x.fillText(`${c.rally} ${String(index+1).padStart(2,"0")}`,26,canvas.height-58);x.fillStyle="#9aabb5";x.font="600 15px Arial";x.fillText(`${formatTime(clip.start)} — ${formatTime(clip.end)}  •  profe.lugarerrado.com`,26,canvas.height-29);
+        const percent=Math.min(100,Math.max(0,(playback.currentTime-clip.start)/Math.max(.1,clip.end-clip.start)*100));if(frame++%5===0)setProgress(percent);
+        if(playback.currentTime>=clip.end||playback.ended){playback.pause();if(recorder.state!=="inactive")recorder.stop();return}
+        requestAnimationFrame(drawShort);
+      };
+      recorder.start(250);await playback.play();drawShort();await stopped;
+      const blob=new Blob(chunks,{type:recorder.mimeType||"video/webm"}),extension=blob.type.includes("mp4")?"mp4":"webm",url=URL.createObjectURL(blob),download=document.createElement("a");
+      download.href=url;download.download=`profe-${sport}-${String(index+1).padStart(2,"0")}.${extension}`;download.click();setTimeout(()=>URL.revokeObjectURL(url),1500);setProgress(100);setMessage(c.shortReady);
+    }catch{setMessage(c.exportUnsupported)}finally{playback.pause();playback.removeAttribute("src");playback.load();setExporting(null)}
   }
   function videoTime(){
     const v=video.current;if(!v)return;draw();
@@ -223,7 +261,7 @@ export default function Home() {
           <button className="secondary" onClick={restart}>{c.restart}</button>
           <button className="linkBtn" onClick={()=>{setSrc("");setClips([]);setSelectedClip(null)}}>{c.another}</button>
         </aside>
-      </div>{clips.length>0&&<div className="clips"><div className="clipsHead"><div><p className="eyebrow blue">{c.finalizations}</p><h3>{c.finalizationsTitle}</h3></div><small>{c.estimate}</small></div><div className="clipGrid">{clips.map((clip,i)=><article className={selectedClip?.id===clip.id?"selected":""} key={clip.id}><b>{String(i+1).padStart(2,"0")}</b><div><strong>{formatTime(clip.start)} — {formatTime(clip.end)}</strong><small>{Math.round(clip.confidence*100)}% {c.confidence.toLowerCase()}</small></div><button onClick={()=>previewClip(clip)}>{c.play}</button><button className="analyzeClip" onClick={()=>analyzeClip(clip)}>{c.analyzeClip}</button></article>)}</div></div>}</>}
+      </div>{clips.length>0&&<div className="clips"><div className="clipsHead"><div><p className="eyebrow blue">{c.finalizations}</p><h3>{c.finalizationsTitle}</h3></div><small>{c.estimate}</small></div><div className="clipGrid">{clips.map((clip,i)=><article className={selectedClip?.id===clip.id?"selected":""} key={clip.id}><b>{String(i+1).padStart(2,"0")}</b><div><strong>{formatTime(clip.start)} — {formatTime(clip.end)}</strong><small>{Math.round(clip.confidence*100)}% {c.confidence.toLowerCase()}</small></div><button onClick={()=>previewClip(clip)}>{c.play}</button><button className="analyzeClip" onClick={()=>analyzeClip(clip)}>{c.analyzeClip}</button><button className="downloadShort" disabled={exporting!==null} onClick={()=>exportShort(clip,i)}>{exporting===clip.id?c.exportingShort:c.downloadShort}</button></article>)}</div></div>}</>}
       <input ref={picker} hidden type="file" accept="video/mp4,video/webm,video/quicktime" onChange={upload}/><p className="notice">{message}</p>
     </section>
     {path.length>1&&<section className="result">
