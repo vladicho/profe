@@ -116,7 +116,7 @@ export default function Home() {
     } else if(stage!=="tracking"){setPath(old=>[...old,p].sort((a,b)=>a.t-b.t));setMessage(c.corrected)}
   }
   function find(data:ImageData,target:number[],prev:P,w:number,h:number){
-    let best:P|null=null,score=Infinity,rad=Math.max(90,w*.14);
+    let best:P|null=null,score=Infinity;const rad=Math.max(90,w*.14);
     const ax=Math.max(0,prev.x-rad),bx=Math.min(w,prev.x+rad),ay=Math.max(0,prev.y-rad),by=Math.min(h,prev.y+rad);
     for(let y=ay;y<by;y+=3)for(let x=ax;x<bx;x+=3){
       const i=(Math.floor(y)*w+Math.floor(x))*4,dr=data.data[i]-target[0],dg=data.data[i+1]-target[1],db=data.data[i+2]-target[2];
