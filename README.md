@@ -22,9 +22,18 @@ La estimación usa una sola cámara y no sustituye un sistema oficial de arbitra
 ## Desarrollo
 
 ```bash
-npm run install:ci
+npm ci
 npm run dev
 ```
+
+## Deploy directo en Cloudflare
+
+El proyecto se publica desde GitHub mediante Cloudflare Workers Builds, sin
+pasar por ChatGPT Sites.
+
+- Comando de build: `npm run build`
+- Comando de deploy: `npx wrangler deploy`
+- Dominio: `profe.lugarerrado.com`
 
 ## Referencias visuales
 
