@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, MouseEvent, useEffect, useRef, useState } from "react";
-import Fronton3D from "./fronton-3d";
+import Fronton3DLoader from "./fronton-3d-loader";
 import { getPoseDetector, PoseDetector, PosePoint } from "./pose-tracker";
 
 type P = { x:number; y:number; t:number };
@@ -287,7 +287,7 @@ export default function Home() {
       <div className="exampleHead"><p className="eyebrow">{c.example}</p><h2>{c.exampleTitle}</h2></div>
       <div className="exampleGrid">
         <article className="original"><div className="exampleLabel"><b>01</b><strong>{c.originalVideo}</strong></div><div className="shortFrame"><iframe src="https://www.youtube-nocookie.com/embed/bFkJy8iZtFk?rel=0&amp;playsinline=1" title="Lazzaroni MADE IN BOLIVIA — El Negrito del Frontón" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen/></div><p>{c.exampleCredit}</p></article>
-        <article className="simulation"><div className="exampleLabel"><b>02</b><strong>{c.simulation}</strong></div><Fronton3D lang={lang}/><p>{c.illustrative}</p></article>
+        <article className="simulation"><div className="exampleLabel"><b>02</b><strong>{c.simulation}</strong></div><Fronton3DLoader lang={lang} label={c.simulation}/><p>{c.illustrative}</p></article>
       </div>
     </section>
     <section className="lab">
