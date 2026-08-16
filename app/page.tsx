@@ -13,10 +13,10 @@ type RallyClip = { id:number; start:number; end:number; confidence:number };
 const COPY = {
   es: {
     private:"análisis local y privado", eyebrow:"VISIÓN COMPUTACIONAL PARA DEPORTES DE PARED",
-    headline:<>La jugada<br/>no miente.</>, hero:"Sube una grabación, calibra la cancha y observa la trayectoria estimada, el rebote y el impacto de la pelota.",
+    headline:<>La pelota<br/>no miente.</>, hero:"Sube una grabación, calibra la cancha y observa la trayectoria estimada, el rebote y el impacto de la pelota.",
     center:"CENTRO DE ANÁLISIS", review:"Revisa la jugada.", time:"3 pasos · cerca de 1 minuto",
     choose:"Elige el deporte", fronton:"Frontón", frontonText:"Frontis, suelo y zona válida", racquetball:"Ráquetbol", racquetText:"Pared frontal, laterales, techo y suelo",
-    upload:"Subir video", uploadHelp:"MP4, MOV o WebM · procesado en tu dispositivo", videoLink:"Enlace del video", useLink:"Usar enlace",
+    upload:"Subir video", uploadHelp:"MP4, MOV o WebM · procesado en tu dispositivo", live:"Cámara en vivo", liveHelp:"Analiza la imagen en tiempo real en este dispositivo", liveStarting:"Abriendo la cámara…", liveError:"No fue posible abrir la cámara. Revisa el permiso del navegador.", videoLink:"Enlace del video", useLink:"Usar enlace",
     linkHelp:"La importación directa se integrará con las API oficiales.", calibrate:"Calibrar cancha", calibrateHelp:"Marca las cuatro esquinas en el orden indicado.",
     selectBall:"Seleccionar pelota", selectHelp:"Pausa y toca el centro de la pelota.", tracking:"Rastrear trayectoria", trackingHelp:"Analiza hasta 12 segundos de la jugada.",
     analyzing:"Analizando…", start:"Iniciar rastreo", restart:"Repetir calibración", another:"Elegir otro video",
@@ -39,14 +39,14 @@ const COPY = {
     tutorial:"TUTORIAL EN VIDEO", tutorialTitle:"Mira el proceso completo.", tutorialIntro:"Un recorrido visual, sin saltos, desde el video original hasta la trayectoria y el short.", tutorialPlay:"Reproducir tutorial de Frontón",
     tutorialSteps:["Elige Frontón y sube un archivo permitido.","Pulsa Detectar finales y espera el análisis.","Elige una jugada y pulsa Analizar.","Marca las cuatro esquinas en el orden indicado.","Pausa y toca exactamente el centro de la pelota.","Inicia el rastreo, revisa la línea y descarga el short."],
     example:"EJEMPLO REAL + SIMULACIÓN 3D", exampleTitle:"Así se ve una jugada analizada.", originalVideo:"Video original", simulation:"Simulación 3D del frontón", playSimulation:"Reproducir animación", replay:"Repetir simulación",
-    exampleCredit:"Video reproducido por el player oficial de YouTube · El Negrito del Frontón", illustrative:"Reconstrucción del desenlace entre 30–35 s: impacto en la zona especial cerca de la lata, dos piques y respuesta fallida. Resultado indicado: 2 puntos. Posiciones aproximadas; no sustituye el arbitraje.", hit:"GOLPE", frontisLabel:"FRONTIS", bounceLabel:"PIQUE", returnLabel:"FINAL", hitsLabel:"LANCE FINAL"
+    exampleCredit:"Video reproducido por el player oficial de YouTube · El Negrito del Frontón", illustrative:"Reconstrucción del desenlace entre 25–30 s: impacto en la zona especial cerca de la lata, dos piques y respuesta fallida. Resultado indicado: 2 puntos. Posiciones aproximadas; no sustituye el arbitraje.", hit:"GOLPE", frontisLabel:"FRONTIS", bounceLabel:"PIQUE", returnLabel:"FINAL", hitsLabel:"LANCE FINAL"
   },
   pt: {
     private:"análise local e privada", eyebrow:"VISÃO COMPUTACIONAL PARA ESPORTES DE PAREDE",
-    headline:<>A jogada<br/>não mente.</>, hero:"Envie uma gravação, calibre a quadra e veja a trajetória estimada, o quique e o impacto da bola.",
+    headline:<>A bola<br/>não mente.</>, hero:"Envie uma gravação, calibre a quadra e veja a trajetória estimada, o quique e o impacto da bola.",
     center:"CENTRAL DE ANÁLISE", review:"Reveja a jogada.", time:"3 passos · cerca de 1 minuto",
     choose:"Escolha o esporte", fronton:"Frontón", frontonText:"Frontis, chão e área válida", racquetball:"Raquetebol", racquetText:"Parede frontal, laterais, teto e chão",
-    upload:"Enviar vídeo", uploadHelp:"MP4, MOV ou WebM · processado no aparelho", videoLink:"Link do vídeo", useLink:"Usar link",
+    upload:"Enviar vídeo", uploadHelp:"MP4, MOV ou WebM · processado no aparelho", live:"Câmera ao vivo", liveHelp:"Analisa a imagem em tempo real neste aparelho", liveStarting:"Abrindo a câmera…", liveError:"Não foi possível abrir a câmera. Confira a permissão do navegador.", videoLink:"Link do vídeo", useLink:"Usar link",
     linkHelp:"A importação direta será integrada às APIs oficiais.", calibrate:"Calibrar quadra", calibrateHelp:"Marque os quatro cantos na ordem indicada.",
     selectBall:"Selecionar a bola", selectHelp:"Pause e toque no centro da bola.", tracking:"Rastrear trajetória", trackingHelp:"Analisa até 12 segundos da jogada.",
     analyzing:"Analisando…", start:"Iniciar rastreamento", restart:"Recomeçar calibração", another:"Escolher outro vídeo",
@@ -69,7 +69,7 @@ const COPY = {
     tutorial:"TUTORIAL EM VÍDEO", tutorialTitle:"Veja o processo completo.", tutorialIntro:"Um passo a passo visual, sem pular etapas, do vídeo original até a trajetória e o short.", tutorialPlay:"Reproduzir tutorial de Frontón",
     tutorialSteps:["Escolha Frontón e envie um arquivo permitido.","Toque em Detectar finalizações e aguarde.","Escolha um lance e toque em Analisar.","Marque os quatro cantos na ordem mostrada.","Pause e toque exatamente no centro da bola.","Inicie o rastreamento, confira a linha e baixe o short."],
     example:"EXEMPLO REAL + SIMULAÇÃO 3D", exampleTitle:"Veja como fica uma jogada analisada.", originalVideo:"Vídeo original", simulation:"Simulação 3D do frontón", playSimulation:"Reproduzir animação", replay:"Repetir simulação",
-    exampleCredit:"Vídeo reproduzido pelo player oficial do YouTube · El Negrito del Frontón", illustrative:"Reconstrução da finalização entre 30–35 s: impacto na área especial perto da lata, dois quiques e resposta perdida. Resultado indicado: 2 pontos. Posições aproximadas; não substitui a arbitragem.", hit:"GOLPE", frontisLabel:"FRONTIS", bounceLabel:"QUIQUE", returnLabel:"FINAL", hitsLabel:"LANCE FINAL"
+    exampleCredit:"Vídeo reproduzido pelo player oficial do YouTube · El Negrito del Frontón", illustrative:"Reconstrução da finalização entre 25–30 s: impacto na área especial perto da lata, dois quiques e resposta perdida. Resultado indicado: 2 pontos. Posições aproximadas; não substitui a arbitragem.", hit:"GOLPE", frontisLabel:"FRONTIS", bounceLabel:"QUIQUE", returnLabel:"FINAL", hitsLabel:"LANCE FINAL"
   }
 };
 
@@ -92,6 +92,7 @@ export default function Home() {
   const [selectedClip,setSelectedClip]=useState<RallyClip|null>(null);
   const [detecting,setDetecting]=useState(false);
   const [exporting,setExporting]=useState<number|null>(null);
+  const [liveStream,setLiveStream]=useState<MediaStream|null>(null);
   const c=COPY[lang];
 
   function draw(){
@@ -112,15 +113,26 @@ export default function Home() {
     const last=visible.at(-1);if(last){x.fillStyle="#c9ff36";x.beginPath();x.arc(last.x,last.y,7,0,7);x.fill()}
   }
   useEffect(()=>{draw();window.addEventListener("resize",draw);return()=>window.removeEventListener("resize",draw)});
-  useEffect(()=>()=>{if(src)URL.revokeObjectURL(src)},[src]);
+  useEffect(()=>()=>{if(src.startsWith("blob:"))URL.revokeObjectURL(src)},[src]);
+  useEffect(()=>{const v=video.current;if(v&&liveStream){v.srcObject=liveStream;v.play().catch(()=>{})}return()=>{}},[liveStream,src]);
+  useEffect(()=>()=>{liveStream?.getTracks().forEach(track=>track.stop())},[liveStream]);
   useEffect(()=>{const saved=localStorage.getItem("profe-lang");if(saved==="pt"||saved==="es")setLang(saved)},[]);
   function language(next:Lang){setLang(next);localStorage.setItem("profe-lang",next)}
 
   function upload(e:ChangeEvent<HTMLInputElement>){
     const f=e.target.files?.[0];if(!f)return;
-    if(src)URL.revokeObjectURL(src);setSrc(URL.createObjectURL(f));setCourt([]);setPath([]);setRgb(null);setClips([]);setSelectedClip(null);setStage("court");setProgress(0);
+    stopLive();if(src.startsWith("blob:"))URL.revokeObjectURL(src);setSrc(URL.createObjectURL(f));setCourt([]);setPath([]);setRgb(null);setClips([]);setSelectedClip(null);setStage("court");setProgress(0);
     setMessage(c.corners);
   }
+  async function startLive(){
+    if(!navigator.mediaDevices?.getUserMedia){setMessage(c.liveError);return}
+    setMessage(c.liveStarting);
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:true});
+      stopLive();setLiveStream(stream);setSrc("live-camera");setCourt([]);setPath([]);setRgb(null);setClips([]);setSelectedClip(null);setStage("court");setProgress(0);setMessage(c.corners);
+    }catch{setMessage(c.liveError)}
+  }
+  function stopLive(){liveStream?.getTracks().forEach(track=>track.stop());setLiveStream(null)}
   async function seek(v:HTMLVideoElement,time:number){
     if(Math.abs(v.currentTime-time)<.03)return;
     await new Promise<void>((resolve,reject)=>{
@@ -230,6 +242,7 @@ export default function Home() {
   }
   function track(){
     const v=video.current;if(!v||!rgb||!path.length)return;
+    if(liveStream){trackLive();return}
     setStage("tracking");setMessage(c.tracing);v.pause();
     const c=document.createElement("canvas");c.width=v.videoWidth;c.height=v.videoHeight;const x=c.getContext("2d",{willReadFrequently:true})!;
     const pts=[...path],start=v.currentTime,end=Math.min(v.duration,selectedClip?.end??start+12);
@@ -238,6 +251,18 @@ export default function Home() {
       x.drawImage(v,0,0);const found=find(x.getImageData(0,0,c.width,c.height),rgb,pts.at(-1)!,c.width,c.height);
       if(found)pts.push({...found,t:v.currentTime});setPath([...pts]);setProgress((v.currentTime-start)/Math.max(.1,end-start)*100);
       v.currentTime=Math.min(end,v.currentTime+1/24);timer.current=window.setTimeout(step,28);
+    };step();
+  }
+  function trackLive(){
+    const v=video.current;if(!v||!rgb||!path.length)return;
+    setStage("tracking");setMessage(c.tracing);
+    const scan=document.createElement("canvas");scan.width=v.videoWidth;scan.height=v.videoHeight;const x=scan.getContext("2d",{willReadFrequently:true})!;
+    const pts=[...path],started=performance.now();
+    const step=()=>{
+      const elapsed=(performance.now()-started)/1000;
+      if(elapsed>=12){setPath([...pts]);setStage("done");setProgress(100);setMessage(c.complete);return}
+      x.drawImage(v,0,0);const found=find(x.getImageData(0,0,scan.width,scan.height),rgb,pts.at(-1)!,scan.width,scan.height);
+      if(found)pts.push({...found,t:v.currentTime});setPath([...pts]);setProgress(elapsed/12*100);timer.current=window.setTimeout(step,42);
     };step();
   }
   function restart(){if(timer.current)clearTimeout(timer.current);setCourt([]);setPath([]);setRgb(null);setStage("court");setProgress(0);setMessage(c.again)}
@@ -267,19 +292,20 @@ export default function Home() {
       {!sport?<div className="sportPick"><h3>{c.choose}</h3><div><button onClick={()=>{setSport("fronton");setMessage(c.initial)}}><span>F</span><strong>{c.fronton}</strong><small>{c.frontonText}</small></button><button onClick={()=>{setSport("racquetball");setMessage(c.initial)}}><span>R</span><strong>{c.racquetball}</strong><small>{c.racquetText}</small></button></div></div>:
       !src?<><div className="sportBar"><b>{sport==="fronton"?c.fronton:c.racquetball}</b><button onClick={()=>setSport(null)}>{c.changeSport}</button></div><div className="sources">
         <button className="upload" onClick={()=>picker.current?.click()}><span>↑</span><strong>{c.upload}</strong><small>{c.uploadHelp}</small></button>
+        <button className="upload liveSource" onClick={startLive}><span>●</span><strong>{c.live}</strong><small>{c.liveHelp}</small></button>
         <div className="external"><strong>{c.videoLink}</strong><div><input value={link} onChange={e=>setLink(e.target.value)} placeholder="YouTube ou Facebook"/><button onClick={()=>setMessage(c.linkMessage)}>{c.useLink}</button></div><small>{c.linkHelp}</small></div>
       </div></>:<><div className="analyzer">
-        <div className="screen"><video ref={video} src={src} controls playsInline onLoadedMetadata={draw} onTimeUpdate={videoTime}/><canvas ref={overlay} onClick={clickVideo}/><div className="screenStatus"><span>{message}</span><b>{Math.round(progress)}%</b></div><i className="bar" style={{width:progress+"%"}}/></div>
+        <div className="screen"><video ref={video} src={liveStream?undefined:src} controls={!liveStream} autoPlay={!!liveStream} muted={!!liveStream} playsInline onLoadedMetadata={draw} onTimeUpdate={videoTime}/><canvas ref={overlay} onClick={clickVideo}/><div className="screenStatus"><span>{message}</span><b>{Math.round(progress)}%</b></div><i className="bar" style={{width:progress+"%"}}/></div>
         <aside>
           <div className="activeSport">{sport==="fronton"?c.fronton:c.racquetball}</div>
-          <div className="detectActions"><button className="detect" disabled={detecting||stage==="tracking"} onClick={detectRallies}>{detecting?c.detecting:c.detect}</button><button className="markFinal" disabled={detecting||stage==="tracking"} onClick={markFinal}>{c.markFinal}</button></div>
+          <div className="detectActions"><button className="detect" disabled={!!liveStream||detecting||stage==="tracking"} onClick={detectRallies}>{detecting?c.detecting:c.detect}</button><button className="markFinal" disabled={!!liveStream||detecting||stage==="tracking"} onClick={markFinal}>{c.markFinal}</button></div>
           <small className="detectHelp">{c.detectHelp}</small>
           <Step n="01" title={c.calibrate} text={c.calibrateHelp} active={stage==="court"} done={court.length===4} tag={court.length+"/4"}/>
           <Step n="02" title={c.selectBall} text={c.selectHelp} active={stage==="ball"} done={!!rgb}/>
           <Step n="03" title={c.tracking} text={c.trackingHelp} active={stage==="ready"||stage==="tracking"} done={stage==="done"}/>
           <button className="primary" disabled={!rgb||stage==="tracking"} onClick={track}>{stage==="tracking"?c.analyzing:c.start}</button>
           <button className="secondary" onClick={restart}>{c.restart}</button>
-          <button className="linkBtn" onClick={()=>{setSrc("");setClips([]);setSelectedClip(null)}}>{c.another}</button>
+          <button className="linkBtn" onClick={()=>{stopLive();setSrc("");setClips([]);setSelectedClip(null)}}>{c.another}</button>
         </aside>
       </div>{clips.length>0&&<div className="clips"><div className="clipsHead"><div><p className="eyebrow blue">{c.finalizations}</p><h3>{c.finalizationsTitle}</h3></div><small>{c.estimate}</small></div><div className="clipGrid">{clips.map((clip,i)=><article className={selectedClip?.id===clip.id?"selected":""} key={clip.id}><b>{String(i+1).padStart(2,"0")}</b><div><strong>{formatTime(clip.start)} — {formatTime(clip.end)}</strong><small>{Math.round(clip.confidence*100)}% {c.confidence.toLowerCase()}</small></div><button onClick={()=>previewClip(clip)}>{c.play}</button><button className="analyzeClip" onClick={()=>analyzeClip(clip)}>{c.analyzeClip}</button><button className="downloadShort" disabled={exporting!==null} onClick={()=>exportShort(clip,i)}>{exporting===clip.id?c.exportingShort:c.downloadShort}</button></article>)}</div></div>}</>}
       <input ref={picker} hidden type="file" accept="video/mp4,video/webm,video/quicktime" onChange={upload}/><p className="notice">{message}</p>
