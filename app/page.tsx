@@ -2,6 +2,7 @@
 
 import { ChangeEvent, MouseEvent, useEffect, useRef, useState } from "react";
 import Fronton3D from "./fronton-3d";
+import { getPoseDetector, PoseDetector, PosePoint } from "./pose-tracker";
 
 type P = { x:number; y:number; t:number };
 type Stage = "court" | "ball" | "ready" | "tracking" | "done";
@@ -78,6 +79,7 @@ export default function Home() {
   const overlay = useRef<HTMLCanvasElement>(null);
   const picker = useRef<HTMLInputElement>(null);
   const timer = useRef<number | null>(null);
+  const poses = useRef<PosePoint[][]>([]);
   const [src,setSrc]=useState("");
   const [link,setLink]=useState("");
   const [stage,setStage]=useState<Stage>("court");
@@ -111,6 +113,7 @@ export default function Home() {
     const visible=path.filter(p=>p.t<=v.currentTime+.08).map(q);
     if(visible.length>1){x.strokeStyle="#c9ff36";x.lineWidth=4;x.lineCap="round";x.beginPath();visible.forEach((p,i)=>i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y));x.stroke()}
     const last=visible.at(-1);if(last){x.fillStyle="#c9ff36";x.beginPath();x.arc(last.x,last.y,7,0,7);x.fill()}
+    drawDetectedPoses(x,poses.current,r.width,r.height);
   }
   useEffect(()=>{draw();window.addEventListener("resize",draw);return()=>window.removeEventListener("resize",draw)});
   useEffect(()=>()=>{if(src.startsWith("blob:"))URL.revokeObjectURL(src)},[src]);
@@ -121,7 +124,7 @@ export default function Home() {
 
   function upload(e:ChangeEvent<HTMLInputElement>){
     const f=e.target.files?.[0];if(!f)return;
-    stopLive();if(src.startsWith("blob:"))URL.revokeObjectURL(src);setSrc(URL.createObjectURL(f));setCourt([]);setPath([]);setRgb(null);setClips([]);setSelectedClip(null);setStage("court");setProgress(0);
+    stopLive();poses.current=[];if(src.startsWith("blob:"))URL.revokeObjectURL(src);setSrc(URL.createObjectURL(f));setCourt([]);setPath([]);setRgb(null);setClips([]);setSelectedClip(null);setStage("court");setProgress(0);
     setMessage(c.corners);
   }
   async function startLive(){
@@ -129,7 +132,7 @@ export default function Home() {
     setMessage(c.liveStarting);
     try{
       const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:true});
-      stopLive();setLiveStream(stream);setSrc("live-camera");setCourt([]);setPath([]);setRgb(null);setClips([]);setSelectedClip(null);setStage("court");setProgress(0);setMessage(c.corners);
+      stopLive();poses.current=[];setLiveStream(stream);setSrc("live-camera");setCourt([]);setPath([]);setRgb(null);setClips([]);setSelectedClip(null);setStage("court");setProgress(0);setMessage(c.corners);
     }catch{setMessage(c.liveError)}
   }
   function stopLive(){if(timer.current)clearTimeout(timer.current);liveStream?.getTracks().forEach(track=>track.stop());setLiveStream(null)}
@@ -240,31 +243,32 @@ export default function Home() {
     }
     return score<12500?best:null;
   }
-  function track(){
+  async function track(){
     const v=video.current;if(!v||!rgb||!path.length)return;
     if(liveStream&&stage==="tracking"){if(timer.current)clearTimeout(timer.current);setStage("done");setMessage(c.complete);return}
-    if(liveStream){trackLive();return}
+    let pose:PoseDetector|null=null;try{pose=await getPoseDetector()}catch{}
+    if(liveStream){trackLive(pose);return}
     setStage("tracking");setMessage(c.tracing);v.pause();
     const c=document.createElement("canvas");c.width=v.videoWidth;c.height=v.videoHeight;const x=c.getContext("2d",{willReadFrequently:true})!;
-    const pts=[...path],start=v.currentTime,end=Math.min(v.duration,selectedClip?.end??start+12);
+    const pts=[...path],start=v.currentTime,end=Math.min(v.duration,selectedClip?.end??start+12);let frame=0;
     const step=()=>{
       if(v.currentTime>=end||v.ended){setPath([...pts]);setStage("done");setProgress(100);setMessage(c.complete);return}
-      x.drawImage(v,0,0);const found=find(x.getImageData(0,0,c.width,c.height),rgb,pts.at(-1)!,c.width,c.height);
+      x.drawImage(v,0,0);if(pose&&frame++%3===0)poses.current=pose.detectForVideo(v,Math.round(v.currentTime*1000)).landmarks;const found=find(x.getImageData(0,0,c.width,c.height),rgb,pts.at(-1)!,c.width,c.height);
       if(found)pts.push({...found,t:v.currentTime});setPath([...pts]);setProgress((v.currentTime-start)/Math.max(.1,end-start)*100);
       v.currentTime=Math.min(end,v.currentTime+1/24);timer.current=window.setTimeout(step,28);
     };step();
   }
-  function trackLive(){
+  function trackLive(pose:PoseDetector|null){
     const v=video.current;if(!v||!rgb||!path.length)return;
     setStage("tracking");setMessage(c.tracing);
     const scan=document.createElement("canvas");scan.width=v.videoWidth;scan.height=v.videoHeight;const x=scan.getContext("2d",{willReadFrequently:true})!;
     const pts=[...path];let frame=0;
     const step=()=>{
-      x.drawImage(v,0,0);const found=find(x.getImageData(0,0,scan.width,scan.height),rgb,pts.at(-1)!,scan.width,scan.height);
+      x.drawImage(v,0,0);if(pose&&frame%3===0)poses.current=pose.detectForVideo(v,performance.now()).landmarks;const found=find(x.getImageData(0,0,scan.width,scan.height),rgb,pts.at(-1)!,scan.width,scan.height);
       if(found){pts.push({...found,t:v.currentTime});if(pts.length>1800)pts.splice(0,pts.length-1800)}if(frame++%2===0)setPath([...pts]);setProgress(100);timer.current=window.setTimeout(step,42);
     };step();
   }
-  function restart(){if(timer.current)clearTimeout(timer.current);setCourt([]);setPath([]);setRgb(null);setStage("court");setProgress(0);setMessage(c.again)}
+  function restart(){if(timer.current)clearTimeout(timer.current);poses.current=[];setCourt([]);setPath([]);setRgb(null);setStage("court");setProgress(0);setMessage(c.again)}
 
   const bounds=court.length===4?{minX:Math.min(...court.map(p=>p.x)),maxX:Math.max(...court.map(p=>p.x)),minY:Math.min(...court.map(p=>p.y)),maxY:Math.max(...court.map(p=>p.y))}:null;
   let bounce=path.at(-1)||null;
@@ -320,6 +324,19 @@ export default function Home() {
 function Step({n,title,text,active,done,tag}:{n:string,title:string,text:string,active:boolean,done:boolean,tag?:string}){return <div className={`step ${active?"active":""} ${done?"done":""}`}><b>{n}</b><div><strong>{title}</strong><small>{text}</small></div>{tag&&<em>{tag}</em>}</div>}
 function Metric({label,value}:{label:string,value:string}){return <div><small>{label}</small><strong>{value}</strong></div>}
 function Info({n,title,text}:{n:string,title:string,text:string}){return <article><b>{n}</b><h3>{title}</h3><p>{text}</p></article>}
+function drawDetectedPoses(x:CanvasRenderingContext2D,poses:PosePoint[][],width:number,height:number){
+  const edges=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]];
+  poses.forEach((pose,index)=>{
+    const point=(n:number)=>({x:pose[n].x*width,y:pose[n].y*height,visible:(pose[n].visibility??1)>.25});
+    x.strokeStyle=index%2?"#61b8ff":"#c9ff36";x.lineWidth=3;x.lineCap="round";
+    for(const [a,b] of edges){if(!pose[a]||!pose[b])continue;const aa=point(a),bb=point(b);if(!aa.visible||!bb.visible)continue;x.beginPath();x.moveTo(aa.x,aa.y);x.lineTo(bb.x,bb.y);x.stroke()}
+    if(pose[0]){const head=point(0);x.beginPath();x.arc(head.x,head.y,6,0,Math.PI*2);x.stroke()}
+    const left=pose[15]&&pose[13]&&pose[11]?Math.hypot(pose[15].x-pose[11].x,pose[15].y-pose[11].y):0;
+    const right=pose[16]&&pose[14]&&pose[12]?Math.hypot(pose[16].x-pose[12].x,pose[16].y-pose[12].y):0;
+    const wrist=left>right?15:16,elbow=left>right?13:14;
+    if(pose[wrist]&&pose[elbow]){const hand=point(wrist),arm=point(elbow),dx=hand.x-arm.x,dy=hand.y-arm.y,length=Math.hypot(dx,dy)||1,hx=hand.x+dx/length*34,hy=hand.y+dy/length*34;x.strokeStyle="#fff";x.lineWidth=2;x.beginPath();x.moveTo(hand.x,hand.y);x.lineTo(hx,hy);x.stroke();x.beginPath();x.ellipse(hx,hy,8,13,Math.atan2(dy,dx),0,Math.PI*2);x.stroke()}
+  });
+}
 function formatTime(seconds:number){const safe=Math.max(0,seconds),minutes=Math.floor(safe/60),rest=Math.floor(safe%60);return `${minutes}:${String(rest).padStart(2,"0")}`}
 
 function finalizationClips(samples:MotionSample[],duration:number,interval:number):RallyClip[]{

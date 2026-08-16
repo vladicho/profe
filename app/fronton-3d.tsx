@@ -1,11 +1,15 @@
 "use client";
 
 import { PointerEvent, useEffect, useRef, useState } from "react";
+import { REAL_POSE_FRAMES } from "./real-pose-data";
 
 type Lang = "es" | "pt";
 type ScoringScenario = "lata" | "special2" | "special3" | "suncho";
 type Scenario = "video" | ScoringScenario;
 type V3 = [number, number, number];
+type PoseKeypoint = readonly [number,number,number];
+type PoseDetection = { k:readonly PoseKeypoint[] };
+const POSE_FRAMES=REAL_POSE_FRAMES as unknown as readonly {t:number;p:readonly PoseDetection[]}[];
 
 const SCENARIOS: Record<ScoringScenario,{strike:V3;impact:V3;score:"against"|"1"|"2"|"3";metal:boolean}> = {
   lata:{strike:[2.1,1.15,9],impact:[-1.25,.15,0],score:"against",metal:true},
@@ -117,10 +121,10 @@ function drawScene(x:CanvasRenderingContext2D,width:number,height:number,yaw:num
 
 function drawVideoRally(x:CanvasRenderingContext2D,project:(v:V3)=>{x:number;y:number;scale:number}|null,time:number,copy:(typeof LABELS)[Lang]){
   label(x,project,[0,6.25,.03],`${copy.estimated} · 00:25 → 00:30`,"#c9ff36");
-  playerSketch(x,project,[VIDEO_PLAY.strike[0],0,VIDEO_PLAY.strike[2]],"#075df8",true,time<.3);
-  playerSketch(x,project,[VIDEO_PLAY.opponent[0],0,VIDEO_PLAY.opponent[2]],time>=.84?"#ff493d":"#9eafb7",false,time>=.76);
-  marker(x,project,VIDEO_PLAY.strike,"#075df8",copy.strike);
-  marker(x,project,VIDEO_PLAY.opponent,time>=.84?"#ff493d":"#54727f",time>=.84?copy.missed:copy.adversary);
+  realPosePlayer(x,project,time,0,"#075df8");
+  realPosePlayer(x,project,time,1,time>=.84?"#ff493d":"#9eafb7");
+  marker(x,project,poseRacketPoint(Math.min(time,.12),0),"#075df8",copy.strike);
+  const opponent=poseBase(time,1);marker(x,project,[opponent[0],1.05,opponent[2]],time>=.84?"#ff493d":"#54727f",time>=.84?copy.missed:copy.adversary);
   if(time<=0)return;
   const tail:V3[]=[];
   for(let i=Math.max(0,time-.08);i<=time;i+=.008)tail.push(videoBallPosition(i));
@@ -134,7 +138,7 @@ function drawVideoRally(x:CanvasRenderingContext2D,project:(v:V3)=>{x:number;y:n
 
 function videoBallPosition(time:number):V3{
   const t=Math.max(0,Math.min(1,time));
-  if(t<=.28)return arc(VIDEO_PLAY.strike,VIDEO_PLAY.impact,t/.28,1.55);
+  if(t<=.28)return arc(poseRacketPoint(0,0),VIDEO_PLAY.impact,t/.28,1.55);
   if(t<=.62)return arc(VIDEO_PLAY.impact,VIDEO_PLAY.bounce1,(t-.28)/.34,1.7);
   if(t<=.84)return arc(VIDEO_PLAY.bounce1,VIDEO_PLAY.bounce2,(t-.62)/.22,.82);
   return arc(VIDEO_PLAY.bounce2,[2.05,.02,13.4],(t-.84)/.16,.28);
@@ -156,14 +160,24 @@ function polygon(x:CanvasRenderingContext2D,p:(v:V3)=>{x:number;y:number}|null,v
 function line(x:CanvasRenderingContext2D,p:(v:V3)=>{x:number;y:number}|null,a:V3,b:V3,color:string,width:number){const aa=p(a),bb=p(b);if(!aa||!bb)return;x.beginPath();x.moveTo(aa.x,aa.y);x.lineTo(bb.x,bb.y);x.strokeStyle=color;x.lineWidth=width;x.stroke()}
 function marker(x:CanvasRenderingContext2D,p:(v:V3)=>{x:number;y:number;scale:number}|null,at:V3,color:string,text:string){const q=p(at);if(!q)return;x.fillStyle=color;x.beginPath();x.arc(q.x,q.y,7,0,Math.PI*2);x.fill();x.strokeStyle="#fff";x.lineWidth=2;x.stroke();x.fillStyle="#061420dd";x.fillRect(q.x+10,q.y-18,x.measureText(text).width+15,22);x.fillStyle="#fff";x.font="800 10px Arial";x.fillText(text,q.x+17,q.y-3)}
 function impactRing(x:CanvasRenderingContext2D,p:(v:V3)=>{x:number;y:number;scale:number}|null,at:V3){const q=p(at);if(!q)return;x.strokeStyle="#ff493d";x.lineWidth=3;x.beginPath();x.arc(q.x,q.y,18,0,Math.PI*2);x.stroke();x.strokeStyle="#ffffffaa";x.lineWidth=1;x.beginPath();x.arc(q.x,q.y,28,0,Math.PI*2);x.stroke()}
-function playerSketch(x:CanvasRenderingContext2D,p:(v:V3)=>{x:number;y:number;scale:number}|null,base:V3,color:string,left:boolean,action:boolean){
-  const side=left?-1:1,point=(dx:number,dy:number,dz=0)=>p([base[0]+dx*side,base[1]+dy,base[2]+dz]);
-  const head=point(0,1.72),neck=point(0,1.43),hip=point(0,.78),shoulderA=point(-.24,1.34),shoulderB=point(.24,1.34),footA=point(-.28,0,.08),footB=point(.3,0,-.08),handA=point(action?-.65:-.42,action?1.6:1.02,-.12),handB=point(action?.72:.42,action?1.5:1.02,-.08);
-  const pairs=[[neck,hip],[shoulderA,shoulderB],[hip,footA],[hip,footB],[shoulderA,handA],[shoulderB,handB]];
-  x.strokeStyle=color;x.lineWidth=5;x.lineCap="round";for(const [a,b] of pairs){if(!a||!b)continue;x.beginPath();x.moveTo(a.x,a.y);x.lineTo(b.x,b.y);x.stroke()}
-  if(head){x.fillStyle=color;x.beginPath();x.arc(head.x,head.y,8,0,Math.PI*2);x.fill()}
-  const racketCenter=point(action?1.04:.66,action?1.78:1.12,-.18),racketHandle=handB;if(racketCenter&&racketHandle){x.strokeStyle="#e7eef0";x.lineWidth=3;x.beginPath();x.moveTo(racketHandle.x,racketHandle.y);x.lineTo(racketCenter.x,racketCenter.y);x.stroke();x.beginPath();x.ellipse(racketCenter.x,racketCenter.y,11,16,.35,0,Math.PI*2);x.stroke()}
+function realPosePlayer(x:CanvasRenderingContext2D,p:(v:V3)=>{x:number;y:number;scale:number}|null,time:number,player:number,color:string){
+  const joints=poseJoints(time,player),edges=[[0,5],[0,6],[5,6],[5,7],[7,9],[6,8],[8,10],[5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16]];
+  x.strokeStyle=color;x.lineWidth=5;x.lineCap="round";
+  for(const [a,b] of edges){const aa=p(joints[a]),bb=p(joints[b]);if(!aa||!bb)continue;x.beginPath();x.moveTo(aa.x,aa.y);x.lineTo(bb.x,bb.y);x.stroke()}
+  const head=p(joints[0]);if(head){x.fillStyle=color;x.beginPath();x.arc(head.x,head.y,8,0,Math.PI*2);x.fill()}
+  const racket=poseRacketGeometry(time,player),hand=p(racket.hand),headPoint=p(racket.head);if(hand&&headPoint){x.strokeStyle="#eef5f6";x.lineWidth=3;x.beginPath();x.moveTo(hand.x,hand.y);x.lineTo(headPoint.x,headPoint.y);x.stroke();x.beginPath();x.ellipse(headPoint.x,headPoint.y,11,17,.35,0,Math.PI*2);x.stroke()}
 }
+function poseSample(time:number,player:number){
+  const scaled=Math.max(0,Math.min(.9999,time))*(POSE_FRAMES.length-1),index=Math.floor(scaled),mix=scaled-index,a=POSE_FRAMES[index]?.p[player],b=POSE_FRAMES[Math.min(POSE_FRAMES.length-1,index+1)]?.p[player]??a;
+  return{a,b,mix};
+}
+function poseBase(time:number,player:number):V3{const {a,b,mix}=poseSample(time,player),points=a?.k??[],next=b?.k??points,hipX=lerp((points[11]?.[0]+points[12]?.[0])/2,(next[11]?.[0]+next[12]?.[0])/2,mix),ankleY=lerp(Math.max(points[15]?.[1]??.7,points[16]?.[1]??.7),Math.max(next[15]?.[1]??.7,next[16]?.[1]??.7),mix);return[clamp((hipX-.5)*10,-4.3,4.3),0,clamp((ankleY-.34)/.44*18,1.2,17)]}
+function poseJoints(time:number,player:number):V3[]{
+  const {a,b,mix}=poseSample(time,player),points=a?.k??[],next=b?.k??points,base=poseBase(time,player),hipY=lerp((points[11]?.[1]+points[12]?.[1])/2,(next[11]?.[1]+next[12]?.[1])/2,mix),hipX=lerp((points[11]?.[0]+points[12]?.[0])/2,(next[11]?.[0]+next[12]?.[0])/2,mix),ankleY=lerp(Math.max(points[15]?.[1]??.7,points[16]?.[1]??.7),Math.max(next[15]?.[1]??.7,next[16]?.[1]??.7),mix),height=Math.max(.12,ankleY-lerp(points[0]?.[1]??.3,next[0]?.[1]??.3,mix));
+  return Array.from({length:17},(_,index)=>{const px=lerp(points[index]?.[0]??hipX,next[index]?.[0]??hipX,mix),py=lerp(points[index]?.[1]??hipY,next[index]?.[1]??hipY,mix);return[base[0]+(px-hipX)/height*1.75,Math.max(0,(ankleY-py)/height*1.75),base[2]] as V3});
+}
+function poseRacketGeometry(time:number,player:number){const joints=poseJoints(time,player),left=Math.hypot(joints[9][0]-joints[5][0],joints[9][1]-joints[5][1]),right=Math.hypot(joints[10][0]-joints[6][0],joints[10][1]-joints[6][1]),wrist=left>right?9:10,elbow=left>right?7:8,hand=joints[wrist],arm=[hand[0]-joints[elbow][0],hand[1]-joints[elbow][1],0] as V3,length=Math.hypot(arm[0],arm[1])||1,head=[hand[0]+arm[0]/length*.48,hand[1]+arm[1]/length*.48,hand[2]] as V3;return{hand,head}}
+function poseRacketPoint(time:number,player:number){return poseRacketGeometry(time,player).head}
 function label(x:CanvasRenderingContext2D,p:(v:V3)=>{x:number;y:number}|null,at:V3,text:string,color:string){const q=p(at);if(!q)return;x.fillStyle=color;x.font="800 10px Arial";x.textAlign="center";x.fillText(text,q.x,q.y);x.textAlign="left"}
 function metalSound(context:AudioContext|null){if(!context)return;const now=context.currentTime,gain=context.createGain();gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(.17,now+.01);gain.gain.exponentialRampToValueAtTime(.0001,now+.42);gain.connect(context.destination);[620,1030,1710].forEach((frequency,index)=>{const oscillator=context.createOscillator();oscillator.type="triangle";oscillator.frequency.setValueAtTime(frequency,now);oscillator.frequency.exponentialRampToValueAtTime(frequency*(.75-index*.04),now+.4);oscillator.connect(gain);oscillator.start(now);oscillator.stop(now+.43)})}
-function sub(a:V3,b:V3):V3{return[a[0]-b[0],a[1]-b[1],a[2]-b[2]]}function dot(a:V3,b:V3){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]}function cross(a:V3,b:V3):V3{return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]}function normalize(a:V3):V3{const length=Math.hypot(...a)||1;return[a[0]/length,a[1]/length,a[2]/length]}function lerp(a:number,b:number,t:number){return a+(b-a)*t}
+function sub(a:V3,b:V3):V3{return[a[0]-b[0],a[1]-b[1],a[2]-b[2]]}function dot(a:V3,b:V3){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]}function cross(a:V3,b:V3):V3{return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]}function normalize(a:V3):V3{const length=Math.hypot(...a)||1;return[a[0]/length,a[1]/length,a[2]/length]}function lerp(a:number,b:number,t:number){return a+(b-a)*t}function clamp(value:number,min:number,max:number){return Math.max(min,Math.min(max,value))}
