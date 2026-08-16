@@ -6,7 +6,7 @@ const sans = Geist({ variable: "--sans", subsets: ["latin"] });
 const mono = Geist_Mono({ variable: "--mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "La pelota no miente · Profe",
+  title: "La bola no miente · Profe",
   description: "Análisis de trayectoria para frontón y ráquetbol, en español y portugués.",
   other: { "codex-preview": "development" },
 };

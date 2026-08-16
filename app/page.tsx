@@ -14,7 +14,7 @@ type RallyClip = { id:number; start:number; end:number; confidence:number };
 const COPY = {
   es: {
     private:"análisis local y privado", eyebrow:"VISIÓN COMPUTACIONAL PARA DEPORTES DE PARED",
-    headline:<>La pelota<br/>no miente.</>, hero:"Sube una grabación, calibra la cancha y observa la trayectoria estimada, el rebote y el impacto de la pelota.",
+    headline:<>La bola<br/>no miente.</>, hero:"Sube una grabación, calibra la cancha y observa la trayectoria estimada, el rebote y el impacto de la pelota.",
     center:"CENTRO DE ANÁLISIS", review:"Revisa la jugada.", time:"3 pasos · cerca de 1 minuto",
     choose:"Elige el deporte", fronton:"Frontón", frontonText:"Frontis, suelo y zona válida", racquetball:"Ráquetbol", racquetText:"Pared frontal, laterales, techo y suelo",
     upload:"Subir video", uploadHelp:"MP4, MOV o WebM · procesado en tu dispositivo", live:"Cámara en vivo", liveHelp:"Analiza la imagen en tiempo real en este dispositivo", liveStarting:"Abriendo la cámara…", liveError:"No fue posible abrir la cámara. Revisa el permiso del navegador.", liveBadge:"EN VIVO", stopLive:"Detener análisis", videoLink:"Enlace del video", useLink:"Usar enlace",
@@ -278,15 +278,11 @@ export default function Home() {
 
   return <main>
     <nav><a href="#top" className="logo"><i/>PROFE</a><div className="navTools"><span><b/> {c.private}</span><div className="language"><button className={lang==="es"?"on":""} onClick={()=>language("es")}>ES</button><button className={lang==="pt"?"on":""} onClick={()=>language("pt")}>PT</button></div></div></nav>
-    <header id="top" className="hero"><div><p className="eyebrow">{c.eyebrow}</p><h1>{c.headline}</h1><p>{c.hero}</p></div><div className="courtArt"><i/><b/><em/></div></header>
-    <section className="tutorial">
-      <div className="tutorialCopy"><p className="eyebrow blue">{c.tutorial}</p><h2>{c.tutorialTitle}</h2><p>{c.tutorialIntro}</p><ol>{c.tutorialSteps.map((step,index)=><li key={step}><b>{String(index+1).padStart(2,"0")}</b><span>{step}</span></li>)}</ol></div>
-      <div className="tutorialVideo"><video key={lang} controls playsInline preload="metadata" poster="/tutorial-poster.svg"><source src={`/tutorial-fronton-${lang}.mp4`} type="video/mp4"/>{c.tutorialPlay}</video><span>{c.tutorialPlay} · 00:36</span></div>
-    </section>
+    <header id="top" className="hero"><div><p className="eyebrow">{c.eyebrow}</p><h1>{c.headline}</h1><p>{c.hero}</p></div></header>
     <section className="example">
       <div className="exampleHead"><p className="eyebrow">{c.example}</p><h2>{c.exampleTitle}</h2></div>
       <div className="exampleGrid">
-        <article className="original"><div className="exampleLabel"><b>01</b><strong>{c.originalVideo}</strong></div><div className="shortFrame"><iframe src="https://www.youtube-nocookie.com/embed/bFkJy8iZtFk?rel=0&amp;playsinline=1" title="Lazzaroni MADE IN BOLIVIA — El Negrito del Frontón" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen/></div><p>{c.exampleCredit}</p></article>
+        <article className="original"><div className="exampleLabel"><b>01</b><strong>{c.originalVideo} · 00:25–00:30</strong></div><div className="shortFrame"><iframe src="https://www.youtube-nocookie.com/embed/bFkJy8iZtFk?start=25&amp;end=30&amp;rel=0&amp;playsinline=1" title="Lazzaroni MADE IN BOLIVIA — trecho 00:25 a 00:30" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen/></div><p>{c.exampleCredit}</p></article>
         <article className="simulation"><div className="exampleLabel"><b>02</b><strong>{c.simulation}</strong></div><Fronton3DLoader lang={lang} label={c.simulation}/><p>{c.illustrative}</p></article>
       </div>
     </section>
