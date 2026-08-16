@@ -39,7 +39,7 @@ const COPY = {
     tutorial:"TUTORIAL EN VIDEO", tutorialTitle:"Mira el proceso completo.", tutorialIntro:"Un recorrido visual, sin saltos, desde el video original hasta la trayectoria y el short.", tutorialPlay:"Reproducir tutorial de Frontón",
     tutorialSteps:["Elige Frontón y sube un archivo permitido.","Pulsa Detectar finales y espera el análisis.","Elige una jugada y pulsa Analizar.","Marca las cuatro esquinas en el orden indicado.","Pausa y toca exactamente el centro de la pelota.","Inicia el rastreo, revisa la línea y descarga el short."],
     example:"EJEMPLO REAL + SIMULACIÓN 3D", exampleTitle:"Así se ve una jugada analizada.", originalVideo:"Video original", simulation:"Simulación 3D del frontón", playSimulation:"Reproducir animación", replay:"Repetir simulación",
-    exampleCredit:"Video reproducido por el player oficial de YouTube · El Negrito del Frontón", illustrative:"Reconstrucción visual cuadro a cuadro del rally principal (aprox. 3–29 s): 8 golpes identificados. Posiciones aproximadas; no sustituye el arbitraje.", hit:"GOLPE", frontisLabel:"FRONTIS", bounceLabel:"PIQUE", returnLabel:"FINAL", hitsLabel:"8 GOLPES"
+    exampleCredit:"Video reproducido por el player oficial de YouTube · El Negrito del Frontón", illustrative:"Reconstrucción del desenlace entre 30–35 s: impacto en la zona especial cerca de la lata, dos piques y respuesta fallida. Resultado indicado: 2 puntos. Posiciones aproximadas; no sustituye el arbitraje.", hit:"GOLPE", frontisLabel:"FRONTIS", bounceLabel:"PIQUE", returnLabel:"FINAL", hitsLabel:"LANCE FINAL"
   },
   pt: {
     private:"análise local e privada", eyebrow:"VISÃO COMPUTACIONAL PARA ESPORTES DE PAREDE",
@@ -69,7 +69,7 @@ const COPY = {
     tutorial:"TUTORIAL EM VÍDEO", tutorialTitle:"Veja o processo completo.", tutorialIntro:"Um passo a passo visual, sem pular etapas, do vídeo original até a trajetória e o short.", tutorialPlay:"Reproduzir tutorial de Frontón",
     tutorialSteps:["Escolha Frontón e envie um arquivo permitido.","Toque em Detectar finalizações e aguarde.","Escolha um lance e toque em Analisar.","Marque os quatro cantos na ordem mostrada.","Pause e toque exatamente no centro da bola.","Inicie o rastreamento, confira a linha e baixe o short."],
     example:"EXEMPLO REAL + SIMULAÇÃO 3D", exampleTitle:"Veja como fica uma jogada analisada.", originalVideo:"Vídeo original", simulation:"Simulação 3D do frontón", playSimulation:"Reproduzir animação", replay:"Repetir simulação",
-    exampleCredit:"Vídeo reproduzido pelo player oficial do YouTube · El Negrito del Frontón", illustrative:"Reconstrução visual quadro a quadro do rally principal (aprox. 3–29 s): 8 golpes identificados. Posições aproximadas; não substitui a arbitragem.", hit:"GOLPE", frontisLabel:"FRONTIS", bounceLabel:"QUIQUE", returnLabel:"FINAL", hitsLabel:"8 GOLPES"
+    exampleCredit:"Vídeo reproduzido pelo player oficial do YouTube · El Negrito del Frontón", illustrative:"Reconstrução da finalização entre 30–35 s: impacto na área especial perto da lata, dois quiques e resposta perdida. Resultado indicado: 2 pontos. Posições aproximadas; não substitui a arbitragem.", hit:"GOLPE", frontisLabel:"FRONTIS", bounceLabel:"QUIQUE", returnLabel:"FINAL", hitsLabel:"LANCE FINAL"
   }
 };
 
