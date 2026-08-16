@@ -16,7 +16,7 @@ const COPY = {
     headline:<>La pelota<br/>no miente.</>, hero:"Sube una grabación, calibra la cancha y observa la trayectoria estimada, el rebote y el impacto de la pelota.",
     center:"CENTRO DE ANÁLISIS", review:"Revisa la jugada.", time:"3 pasos · cerca de 1 minuto",
     choose:"Elige el deporte", fronton:"Frontón", frontonText:"Frontis, suelo y zona válida", racquetball:"Ráquetbol", racquetText:"Pared frontal, laterales, techo y suelo",
-    upload:"Subir video", uploadHelp:"MP4, MOV o WebM · procesado en tu dispositivo", live:"Cámara en vivo", liveHelp:"Analiza la imagen en tiempo real en este dispositivo", liveStarting:"Abriendo la cámara…", liveError:"No fue posible abrir la cámara. Revisa el permiso del navegador.", videoLink:"Enlace del video", useLink:"Usar enlace",
+    upload:"Subir video", uploadHelp:"MP4, MOV o WebM · procesado en tu dispositivo", live:"Cámara en vivo", liveHelp:"Analiza la imagen en tiempo real en este dispositivo", liveStarting:"Abriendo la cámara…", liveError:"No fue posible abrir la cámara. Revisa el permiso del navegador.", liveBadge:"EN VIVO", stopLive:"Detener análisis", videoLink:"Enlace del video", useLink:"Usar enlace",
     linkHelp:"La importación directa se integrará con las API oficiales.", calibrate:"Calibrar cancha", calibrateHelp:"Marca las cuatro esquinas en el orden indicado.",
     selectBall:"Seleccionar pelota", selectHelp:"Pausa y toca el centro de la pelota.", tracking:"Rastrear trayectoria", trackingHelp:"Analiza hasta 12 segundos de la jugada.",
     analyzing:"Analizando…", start:"Iniciar rastreo", restart:"Repetir calibración", another:"Elegir otro video",
@@ -46,7 +46,7 @@ const COPY = {
     headline:<>A bola<br/>não mente.</>, hero:"Envie uma gravação, calibre a quadra e veja a trajetória estimada, o quique e o impacto da bola.",
     center:"CENTRAL DE ANÁLISE", review:"Reveja a jogada.", time:"3 passos · cerca de 1 minuto",
     choose:"Escolha o esporte", fronton:"Frontón", frontonText:"Frontis, chão e área válida", racquetball:"Raquetebol", racquetText:"Parede frontal, laterais, teto e chão",
-    upload:"Enviar vídeo", uploadHelp:"MP4, MOV ou WebM · processado no aparelho", live:"Câmera ao vivo", liveHelp:"Analisa a imagem em tempo real neste aparelho", liveStarting:"Abrindo a câmera…", liveError:"Não foi possível abrir a câmera. Confira a permissão do navegador.", videoLink:"Link do vídeo", useLink:"Usar link",
+    upload:"Enviar vídeo", uploadHelp:"MP4, MOV ou WebM · processado no aparelho", live:"Câmera ao vivo", liveHelp:"Analisa a imagem em tempo real neste aparelho", liveStarting:"Abrindo a câmera…", liveError:"Não foi possível abrir a câmera. Confira a permissão do navegador.", liveBadge:"AO VIVO", stopLive:"Parar análise", videoLink:"Link do vídeo", useLink:"Usar link",
     linkHelp:"A importação direta será integrada às APIs oficiais.", calibrate:"Calibrar quadra", calibrateHelp:"Marque os quatro cantos na ordem indicada.",
     selectBall:"Selecionar a bola", selectHelp:"Pause e toque no centro da bola.", tracking:"Rastrear trajetória", trackingHelp:"Analisa até 12 segundos da jogada.",
     analyzing:"Analisando…", start:"Iniciar rastreamento", restart:"Recomeçar calibração", another:"Escolher outro vídeo",
@@ -132,7 +132,7 @@ export default function Home() {
       stopLive();setLiveStream(stream);setSrc("live-camera");setCourt([]);setPath([]);setRgb(null);setClips([]);setSelectedClip(null);setStage("court");setProgress(0);setMessage(c.corners);
     }catch{setMessage(c.liveError)}
   }
-  function stopLive(){liveStream?.getTracks().forEach(track=>track.stop());setLiveStream(null)}
+  function stopLive(){if(timer.current)clearTimeout(timer.current);liveStream?.getTracks().forEach(track=>track.stop());setLiveStream(null)}
   async function seek(v:HTMLVideoElement,time:number){
     if(Math.abs(v.currentTime-time)<.03)return;
     await new Promise<void>((resolve,reject)=>{
@@ -242,6 +242,7 @@ export default function Home() {
   }
   function track(){
     const v=video.current;if(!v||!rgb||!path.length)return;
+    if(liveStream&&stage==="tracking"){if(timer.current)clearTimeout(timer.current);setStage("done");setMessage(c.complete);return}
     if(liveStream){trackLive();return}
     setStage("tracking");setMessage(c.tracing);v.pause();
     const c=document.createElement("canvas");c.width=v.videoWidth;c.height=v.videoHeight;const x=c.getContext("2d",{willReadFrequently:true})!;
@@ -257,12 +258,10 @@ export default function Home() {
     const v=video.current;if(!v||!rgb||!path.length)return;
     setStage("tracking");setMessage(c.tracing);
     const scan=document.createElement("canvas");scan.width=v.videoWidth;scan.height=v.videoHeight;const x=scan.getContext("2d",{willReadFrequently:true})!;
-    const pts=[...path],started=performance.now();
+    const pts=[...path];let frame=0;
     const step=()=>{
-      const elapsed=(performance.now()-started)/1000;
-      if(elapsed>=12){setPath([...pts]);setStage("done");setProgress(100);setMessage(c.complete);return}
       x.drawImage(v,0,0);const found=find(x.getImageData(0,0,scan.width,scan.height),rgb,pts.at(-1)!,scan.width,scan.height);
-      if(found)pts.push({...found,t:v.currentTime});setPath([...pts]);setProgress(elapsed/12*100);timer.current=window.setTimeout(step,42);
+      if(found){pts.push({...found,t:v.currentTime});if(pts.length>1800)pts.splice(0,pts.length-1800)}if(frame++%2===0)setPath([...pts]);setProgress(100);timer.current=window.setTimeout(step,42);
     };step();
   }
   function restart(){if(timer.current)clearTimeout(timer.current);setCourt([]);setPath([]);setRgb(null);setStage("court");setProgress(0);setMessage(c.again)}
@@ -295,7 +294,7 @@ export default function Home() {
         <button className="upload liveSource" onClick={startLive}><span>●</span><strong>{c.live}</strong><small>{c.liveHelp}</small></button>
         <div className="external"><strong>{c.videoLink}</strong><div><input value={link} onChange={e=>setLink(e.target.value)} placeholder="YouTube ou Facebook"/><button onClick={()=>setMessage(c.linkMessage)}>{c.useLink}</button></div><small>{c.linkHelp}</small></div>
       </div></>:<><div className="analyzer">
-        <div className="screen"><video ref={video} src={liveStream?undefined:src} controls={!liveStream} autoPlay={!!liveStream} muted={!!liveStream} playsInline onLoadedMetadata={draw} onTimeUpdate={videoTime}/><canvas ref={overlay} onClick={clickVideo}/><div className="screenStatus"><span>{message}</span><b>{Math.round(progress)}%</b></div><i className="bar" style={{width:progress+"%"}}/></div>
+        <div className="screen"><video ref={video} src={liveStream?undefined:src} controls={!liveStream} autoPlay={!!liveStream} muted={!!liveStream} playsInline onLoadedMetadata={draw} onTimeUpdate={videoTime}/><canvas ref={overlay} onClick={clickVideo}/><div className="screenStatus"><span>{message}</span><b>{liveStream?c.liveBadge:`${Math.round(progress)}%`}</b></div><i className="bar" style={{width:progress+"%"}}/></div>
         <aside>
           <div className="activeSport">{sport==="fronton"?c.fronton:c.racquetball}</div>
           <div className="detectActions"><button className="detect" disabled={!!liveStream||detecting||stage==="tracking"} onClick={detectRallies}>{detecting?c.detecting:c.detect}</button><button className="markFinal" disabled={!!liveStream||detecting||stage==="tracking"} onClick={markFinal}>{c.markFinal}</button></div>
@@ -303,7 +302,7 @@ export default function Home() {
           <Step n="01" title={c.calibrate} text={c.calibrateHelp} active={stage==="court"} done={court.length===4} tag={court.length+"/4"}/>
           <Step n="02" title={c.selectBall} text={c.selectHelp} active={stage==="ball"} done={!!rgb}/>
           <Step n="03" title={c.tracking} text={c.trackingHelp} active={stage==="ready"||stage==="tracking"} done={stage==="done"}/>
-          <button className="primary" disabled={!rgb||stage==="tracking"} onClick={track}>{stage==="tracking"?c.analyzing:c.start}</button>
+          <button className="primary" disabled={!rgb||(stage==="tracking"&&!liveStream)} onClick={track}>{stage==="tracking"?(liveStream?c.stopLive:c.analyzing):c.start}</button>
           <button className="secondary" onClick={restart}>{c.restart}</button>
           <button className="linkBtn" onClick={()=>{stopLive();setSrc("");setClips([]);setSelectedClip(null)}}>{c.another}</button>
         </aside>
