@@ -38,7 +38,7 @@ const COPY = {
     tutorial:"TUTORIAL EN VIDEO", tutorialTitle:"Mira el proceso completo.", tutorialIntro:"Un recorrido visual, sin saltos, desde el video original hasta la trayectoria y el short.", tutorialPlay:"Reproducir tutorial de Frontón",
     tutorialSteps:["Elige Frontón y sube un archivo permitido.","Pulsa Detectar finales y espera el análisis.","Elige una jugada y pulsa Analizar.","Marca las cuatro esquinas en el orden indicado.","Pausa y toca exactamente el centro de la pelota.","Inicia el rastreo, revisa la línea y descarga el short."],
     example:"EJEMPLO REAL + SIMULACIÓN", exampleTitle:"Así se ve una jugada analizada.", originalVideo:"Video original", simulation:"Simulación de trayectoria", replay:"Repetir simulación",
-    exampleCredit:"Video reproducido por el player oficial de YouTube · El Negrito del Frontón", illustrative:"Trayectoria ilustrativa para explicar el proceso; no es una medición oficial del Short.", hit:"GOLPE", frontisLabel:"FRONTIS", bounceLabel:"PIQUE", returnLabel:"RETORNO"
+    exampleCredit:"Video reproducido por el player oficial de YouTube · El Negrito del Frontón", illustrative:"Reconstrucción visual cuadro a cuadro del rally principal (aprox. 3–29 s): 8 golpes identificados. Posiciones aproximadas; no sustituye el arbitraje.", hit:"GOLPE", frontisLabel:"FRONTIS", bounceLabel:"PIQUE", returnLabel:"FINAL", hitsLabel:"8 GOLPES"
   },
   pt: {
     private:"análise local e privada", eyebrow:"VISÃO COMPUTACIONAL PARA ESPORTES DE PAREDE",
@@ -68,7 +68,7 @@ const COPY = {
     tutorial:"TUTORIAL EM VÍDEO", tutorialTitle:"Veja o processo completo.", tutorialIntro:"Um passo a passo visual, sem pular etapas, do vídeo original até a trajetória e o short.", tutorialPlay:"Reproduzir tutorial de Frontón",
     tutorialSteps:["Escolha Frontón e envie um arquivo permitido.","Toque em Detectar finalizações e aguarde.","Escolha um lance e toque em Analisar.","Marque os quatro cantos na ordem mostrada.","Pause e toque exatamente no centro da bola.","Inicie o rastreamento, confira a linha e baixe o short."],
     example:"EXEMPLO REAL + SIMULAÇÃO", exampleTitle:"Veja como fica uma jogada analisada.", originalVideo:"Vídeo original", simulation:"Simulação da trajetória", replay:"Repetir simulação",
-    exampleCredit:"Vídeo reproduzido pelo player oficial do YouTube · El Negrito del Frontón", illustrative:"Trajetória ilustrativa para explicar o processo; não é uma medição oficial do Short.", hit:"GOLPE", frontisLabel:"FRONTIS", bounceLabel:"QUIQUE", returnLabel:"RETORNO"
+    exampleCredit:"Vídeo reproduzido pelo player oficial do YouTube · El Negrito del Frontón", illustrative:"Reconstrução visual quadro a quadro do rally principal (aprox. 3–29 s): 8 golpes identificados. Posições aproximadas; não substitui a arbitragem.", hit:"GOLPE", frontisLabel:"FRONTIS", bounceLabel:"QUIQUE", returnLabel:"FINAL", hitsLabel:"8 GOLPES"
   }
 };
 
@@ -259,7 +259,7 @@ export default function Home() {
       <div className="exampleHead"><p className="eyebrow">{c.example}</p><h2>{c.exampleTitle}</h2></div>
       <div className="exampleGrid">
         <article className="original"><div className="exampleLabel"><b>01</b><strong>{c.originalVideo}</strong></div><div className="shortFrame"><iframe src="https://www.youtube-nocookie.com/embed/bFkJy8iZtFk?rel=0&amp;playsinline=1" title="Lazzaroni MADE IN BOLIVIA — El Negrito del Frontón" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen/></div><p>{c.exampleCredit}</p></article>
-        <article className="simulation"><div className="exampleLabel"><b>02</b><strong>{c.simulation}</strong></div><TrajectorySimulation key={simulationKey} labels={{hit:c.hit,frontis:c.frontisLabel,bounce:c.bounceLabel,return:c.returnLabel}}/><button onClick={()=>setSimulationKey(key=>key+1)}>↻ {c.replay}</button><p>{c.illustrative}</p></article>
+        <article className="simulation"><div className="exampleLabel"><b>02</b><strong>{c.simulation}</strong></div><TrajectorySimulation key={simulationKey} labels={{hit:c.hit,frontis:c.frontisLabel,bounce:c.bounceLabel,return:c.returnLabel,hits:c.hitsLabel}}/><button onClick={()=>setSimulationKey(key=>key+1)}>↻ {c.replay}</button><p>{c.illustrative}</p></article>
       </div>
     </section>
     <section className="lab">
@@ -295,14 +295,17 @@ export default function Home() {
 function Step({n,title,text,active,done,tag}:{n:string,title:string,text:string,active:boolean,done:boolean,tag?:string}){return <div className={`step ${active?"active":""} ${done?"done":""}`}><b>{n}</b><div><strong>{title}</strong><small>{text}</small></div>{tag&&<em>{tag}</em>}</div>}
 function Metric({label,value}:{label:string,value:string}){return <div><small>{label}</small><strong>{value}</strong></div>}
 function Info({n,title,text}:{n:string,title:string,text:string}){return <article><b>{n}</b><h3>{title}</h3><p>{text}</p></article>}
-function TrajectorySimulation({labels}:{labels:{hit:string;frontis:string;bounce:string;return:string}}){
-  const route="M390 540 C350 475 285 402 222 326 C180 276 164 215 218 112 C276 160 326 230 330 292 C333 350 270 394 220 438 C187 468 174 512 190 548";
+function TrajectorySimulation({labels}:{labels:{hit:string;frontis:string;bounce:string;return:string;hits:string}}){
+  const route="M390 540 C355 390 310 210 250 92 C215 225 170 415 140 522 C165 380 245 190 332 92 C370 240 382 408 350 512 C305 370 245 185 168 92 C140 245 155 410 220 505 C265 365 340 185 382 92 C365 245 315 410 270 518 C238 370 185 190 112 92 C120 248 185 420 330 530 C320 385 292 205 245 92 C260 245 315 420 385 545 C350 390 285 200 205 92 C175 250 180 430 155 540";
+  const strikes=[{x:390,y:540,t:"1"},{x:140,y:522,t:"2"},{x:350,y:512,t:"3"},{x:220,y:505,t:"4"},{x:270,y:518,t:"5"},{x:330,y:530,t:"6"},{x:385,y:545,t:"7"},{x:155,y:540,t:"8"}];
   return <svg className="trajectorySimulation" viewBox="0 0 480 640" role="img" aria-label="Simulação ilustrativa da trajetória da bola no Frontón">
     <defs><linearGradient id="courtShade" x1="0" y1="0" x2="0" y2="1"><stop stopColor="#164d42"/><stop offset="1" stopColor="#0b2d2a"/></linearGradient><filter id="ballGlow"><feGaussianBlur stdDeviation="6" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
     <path d="M72 80H408V548H72Z" fill="url(#courtShade)" stroke="#b9c7c2" strokeWidth="3"/><path d="M72 80L32 120V588L72 548M408 80L448 120V588L408 548M32 588H448" fill="none" stroke="#77928b" strokeWidth="3"/><path d="M72 210H408M72 292H408M72 374H408M72 456H408" stroke="#ffffff30" strokeWidth="2"/><path d="M72 548H408M240 80V548" stroke="#ffffff65" strokeWidth="2" strokeDasharray="8 8"/>
-    <path className="trajectoryGhost" d={route}/><path className="trajectoryRoute" d={route}/>
-    <g className="event eventHit"><circle cx="390" cy="540" r="8"/><text x="306" y="573">1 · {labels.hit}</text></g><g className="event eventFrontis"><circle cx="218" cy="112" r="8"/><text x="238" y="106">2 · {labels.frontis}</text></g><g className="event eventBounce"><circle cx="330" cy="292" r="8"/><text x="347" y="286">3 · {labels.bounce}</text></g><g className="event eventReturn"><circle cx="190" cy="548" r="8"/><text x="98" y="580">4 · {labels.return}</text></g>
-    <circle className="simBall" r="10" fill="#c9ff36" filter="url(#ballGlow)"><animateMotion dur="5.2s" begin=".35s" fill="freeze" path={route}/></circle>
+    <path className="trajectoryGhost" d={route}/><path className="trajectoryRoute" pathLength="1" d={route}/>
+    <text className="frontisText" x="240" y="68" textAnchor="middle">{labels.frontis}</text><text className="hitsText" x="42" y="618">{labels.hits} · 00:03 → 00:29</text>
+    {strikes.map((point,index)=><g className="strike" style={{animationDelay:`${.35+index*1.28}s`}} key={point.t}><circle cx={point.x} cy={point.y} r="11"/><text x={point.x} y={point.y+4} textAnchor="middle">{point.t}</text></g>)}
+    <g className="event eventHit"><text x="306" y="573">1 · {labels.hit}</text></g><g className="event eventReturn"><text x="327" y="587">8 · {labels.return}</text></g>
+    <circle className="simBall" r="10" fill="#c9ff36" filter="url(#ballGlow)"><animateMotion dur="10.2s" begin=".35s" fill="freeze" path={route}/></circle>
   </svg>
 }
 
