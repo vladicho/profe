@@ -37,7 +37,7 @@ const COPY = {
     downloadShort:"Descargar short", exportingShort:"Creando short…", shortReady:"Short guardado en tu dispositivo.", exportUnsupported:"Este navegador no permite crear el short. Prueba con Edge o Chrome actualizado.", rally:"JUGADA",
     tutorial:"TUTORIAL EN VIDEO", tutorialTitle:"Mira el proceso completo.", tutorialIntro:"Un recorrido visual, sin saltos, desde el video original hasta la trayectoria y el short.", tutorialPlay:"Reproducir tutorial de Frontón",
     tutorialSteps:["Elige Frontón y sube un archivo permitido.","Pulsa Detectar finales y espera el análisis.","Elige una jugada y pulsa Analizar.","Marca las cuatro esquinas en el orden indicado.","Pausa y toca exactamente el centro de la pelota.","Inicia el rastreo, revisa la línea y descarga el short."],
-    example:"EJEMPLO REAL + SIMULACIÓN", exampleTitle:"Así se ve una jugada analizada.", originalVideo:"Video original", simulation:"Simulación de trayectoria", replay:"Repetir simulación",
+    example:"EJEMPLO REAL + SIMULACIÓN", exampleTitle:"Así se ve una jugada analizada.", originalVideo:"Video original", simulation:"Simulación de trayectoria", playSimulation:"Reproducir animación", replay:"Repetir simulación",
     exampleCredit:"Video reproducido por el player oficial de YouTube · El Negrito del Frontón", illustrative:"Reconstrucción visual cuadro a cuadro del rally principal (aprox. 3–29 s): 8 golpes identificados. Posiciones aproximadas; no sustituye el arbitraje.", hit:"GOLPE", frontisLabel:"FRONTIS", bounceLabel:"PIQUE", returnLabel:"FINAL", hitsLabel:"8 GOLPES"
   },
   pt: {
@@ -67,7 +67,7 @@ const COPY = {
     downloadShort:"Baixar short", exportingShort:"Criando short…", shortReady:"Short salvo no seu aparelho.", exportUnsupported:"Este navegador não consegue criar o short. Tente com Edge ou Chrome atualizado.", rally:"LANCE",
     tutorial:"TUTORIAL EM VÍDEO", tutorialTitle:"Veja o processo completo.", tutorialIntro:"Um passo a passo visual, sem pular etapas, do vídeo original até a trajetória e o short.", tutorialPlay:"Reproduzir tutorial de Frontón",
     tutorialSteps:["Escolha Frontón e envie um arquivo permitido.","Toque em Detectar finalizações e aguarde.","Escolha um lance e toque em Analisar.","Marque os quatro cantos na ordem mostrada.","Pause e toque exatamente no centro da bola.","Inicie o rastreamento, confira a linha e baixe o short."],
-    example:"EXEMPLO REAL + SIMULAÇÃO", exampleTitle:"Veja como fica uma jogada analisada.", originalVideo:"Vídeo original", simulation:"Simulação da trajetória", replay:"Repetir simulação",
+    example:"EXEMPLO REAL + SIMULAÇÃO", exampleTitle:"Veja como fica uma jogada analisada.", originalVideo:"Vídeo original", simulation:"Simulação da trajetória", playSimulation:"Reproduzir animação", replay:"Repetir simulação",
     exampleCredit:"Vídeo reproduzido pelo player oficial do YouTube · El Negrito del Frontón", illustrative:"Reconstrução visual quadro a quadro do rally principal (aprox. 3–29 s): 8 golpes identificados. Posições aproximadas; não substitui a arbitragem.", hit:"GOLPE", frontisLabel:"FRONTIS", bounceLabel:"QUIQUE", returnLabel:"FINAL", hitsLabel:"8 GOLPES"
   }
 };
@@ -91,7 +91,7 @@ export default function Home() {
   const [selectedClip,setSelectedClip]=useState<RallyClip|null>(null);
   const [detecting,setDetecting]=useState(false);
   const [exporting,setExporting]=useState<number|null>(null);
-  const [simulationKey,setSimulationKey]=useState(0);
+  const [simulationKey,setSimulationKey]=useState<number|null>(null);
   const c=COPY[lang];
 
   function draw(){
@@ -259,7 +259,7 @@ export default function Home() {
       <div className="exampleHead"><p className="eyebrow">{c.example}</p><h2>{c.exampleTitle}</h2></div>
       <div className="exampleGrid">
         <article className="original"><div className="exampleLabel"><b>01</b><strong>{c.originalVideo}</strong></div><div className="shortFrame"><iframe src="https://www.youtube-nocookie.com/embed/bFkJy8iZtFk?rel=0&amp;playsinline=1" title="Lazzaroni MADE IN BOLIVIA — El Negrito del Frontón" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen/></div><p>{c.exampleCredit}</p></article>
-        <article className="simulation"><div className="exampleLabel"><b>02</b><strong>{c.simulation}</strong></div><TrajectorySimulation key={simulationKey} labels={{hit:c.hit,frontis:c.frontisLabel,bounce:c.bounceLabel,return:c.returnLabel,hits:c.hitsLabel}}/><button onClick={()=>setSimulationKey(key=>key+1)}>↻ {c.replay}</button><p>{c.illustrative}</p></article>
+        <article className="simulation"><div className="exampleLabel"><b>02</b><strong>{c.simulation}</strong></div>{simulationKey===null?<div className="simulationReady"><span>▶</span><strong>{c.playSimulation}</strong><small>{c.hitsLabel} · 00:03 → 00:29</small></div>:<TrajectorySimulation key={simulationKey} labels={{hit:c.hit,frontis:c.frontisLabel,bounce:c.bounceLabel,return:c.returnLabel,hits:c.hitsLabel}}/>}<button onClick={()=>setSimulationKey(key=>(key??0)+1)}>▶ {simulationKey===null?c.playSimulation:c.replay}</button><p>{c.illustrative}</p></article>
       </div>
     </section>
     <section className="lab">
