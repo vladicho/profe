@@ -2,6 +2,7 @@
 
 import { ChangeEvent, MouseEvent, useEffect, useRef, useState } from "react";
 import Fronton3DLoader from "./fronton-3d-loader";
+import TrainingPlay from "./training-play";
 import { getPoseDetector, PoseDetector, PosePoint } from "./pose-tracker";
 
 type P = { x:number; y:number; t:number };
@@ -40,7 +41,8 @@ const COPY = {
     tutorial:"TUTORIAL EN VIDEO", tutorialTitle:"Mira el proceso completo.", tutorialIntro:"Un recorrido visual, sin saltos, desde el video original hasta la trayectoria y el short.", tutorialPlay:"Reproducir tutorial de Frontón",
     tutorialSteps:["Elige Frontón y sube un archivo permitido.","Pulsa Detectar finales y espera el análisis.","Elige una jugada y pulsa Analizar.","Marca las cuatro esquinas en el orden indicado.","Pausa y toca exactamente el centro de la pelota.","Inicia el rastreo, revisa la línea y descarga el short."],
     example:"EJEMPLO REAL + SIMULACIÓN 3D", exampleTitle:"Así se ve una jugada analizada.", originalVideo:"Video original", simulation:"Simulación 3D del frontón", playSimulation:"Reproducir animación", replay:"Repetir simulación",
-    exampleCredit:"Video reproducido por el player oficial de YouTube · El Negrito del Frontón", illustrative:"Reconstrucción del desenlace entre 25–30 s: jugada pegada a la pared izquierda y al frontis, con 30 cm entre el primer y el segundo pique. Resultado indicado: 2 puntos. No sustituye el arbitraje.", hit:"GOLPE", frontisLabel:"FRONTIS", bounceLabel:"PIQUE", returnLabel:"FINAL", hitsLabel:"LANCE FINAL"
+    exampleCredit:"Video reproducido por el player oficial de YouTube · El Negrito del Frontón", illustrative:"Reconstrucción del desenlace entre 25–30 s: jugada pegada a la pared izquierda y al frontis, con 30 cm entre el primer y el segundo pique. Resultado indicado: 2 puntos. No sustituye el arbitraje.", hit:"GOLPE", frontisLabel:"FRONTIS", bounceLabel:"PIQUE", returnLabel:"FINAL", hitsLabel:"LANCE FINAL",
+    training:"TRAINING",trainingTitle:"Aprende contacto por contacto.",trainingText:"Jugada construida para practicar la lectura de superficies, cuadrantes y orden de contactos."
   },
   pt: {
     private:"análise local e privada", eyebrow:"VISÃO COMPUTACIONAL PARA ESPORTES DE PAREDE",
@@ -70,7 +72,8 @@ const COPY = {
     tutorial:"TUTORIAL EM VÍDEO", tutorialTitle:"Veja o processo completo.", tutorialIntro:"Um passo a passo visual, sem pular etapas, do vídeo original até a trajetória e o short.", tutorialPlay:"Reproduzir tutorial de Frontón",
     tutorialSteps:["Escolha Frontón e envie um arquivo permitido.","Toque em Detectar finalizações e aguarde.","Escolha um lance e toque em Analisar.","Marque os quatro cantos na ordem mostrada.","Pause e toque exatamente no centro da bola.","Inicie o rastreamento, confira a linha e baixe o short."],
     example:"EXEMPLO REAL + SIMULAÇÃO 3D", exampleTitle:"Veja como fica uma jogada analisada.", originalVideo:"Vídeo original", simulation:"Simulação 3D do frontón", playSimulation:"Reproduzir animação", replay:"Repetir simulação",
-    exampleCredit:"Vídeo reproduzido pelo player oficial do YouTube · El Negrito del Frontón", illustrative:"Reconstrução da finalização entre 25–30 s: jogada colada à parede esquerda e ao frontis, com 30 cm entre o primeiro e o segundo quique. Resultado indicado: 2 pontos. Não substitui a arbitragem.", hit:"GOLPE", frontisLabel:"FRONTIS", bounceLabel:"QUIQUE", returnLabel:"FINAL", hitsLabel:"LANCE FINAL"
+    exampleCredit:"Vídeo reproduzido pelo player oficial do YouTube · El Negrito del Frontón", illustrative:"Reconstrução da finalização entre 25–30 s: jogada colada à parede esquerda e ao frontis, com 30 cm entre o primeiro e o segundo quique. Resultado indicado: 2 pontos. Não substitui a arbitragem.", hit:"GOLPE", frontisLabel:"FRONTIS", bounceLabel:"QUIQUE", returnLabel:"FINAL", hitsLabel:"LANCE FINAL",
+    training:"TRAINING",trainingTitle:"Aprenda contato por contato.",trainingText:"Lance construído para treinar a leitura das superfícies, quadrantes e ordem dos contatos."
   }
 };
 
@@ -285,6 +288,10 @@ export default function Home() {
         <article className="original"><div className="exampleLabel"><b>01</b><strong>{c.originalVideo} · 00:25–00:30</strong></div><div className="shortFrame"><iframe src="https://www.youtube-nocookie.com/embed/bFkJy8iZtFk?start=25&amp;end=30&amp;rel=0&amp;playsinline=1" title="Lazzaroni MADE IN BOLIVIA — trecho 00:25 a 00:30" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen/></div><p>{c.exampleCredit}</p></article>
         <article className="simulation"><div className="exampleLabel"><b>02</b><strong>{c.simulation}</strong></div><Fronton3DLoader lang={lang} label={c.simulation}/><p>{c.illustrative}</p></article>
       </div>
+    </section>
+    <section className="training">
+      <div className="trainingHead"><p className="eyebrow">{c.training}</p><h2>{c.trainingTitle}</h2><p>{c.trainingText}</p></div>
+      <TrainingPlay lang={lang}/>
     </section>
     <section className="lab">
       <div className="title"><div><p className="eyebrow blue">{c.center}</p><h2>{c.review}</h2></div><small>{c.time}</small></div>
