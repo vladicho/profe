@@ -23,9 +23,9 @@ const SCENARIOS:Record<ScoringScenario,Shot>={
   suncho:{strike:[2.1,1.15,10.5],impact:[-1.25,.625,0],score:"1",metal:true},
 };
 const VIDEO_PLAY={
-  impact:[-4.7,.41,.06] as V3,
-  bounce1:[-4.67,.05,.52] as V3,
-  bounce2:[-4.67,.05,.82] as V3,
+  impact:[-2.35,.41,.06] as V3,
+  bounce1:[-2.32,.05,.52] as V3,
+  bounce2:[-2.32,.05,.82] as V3,
 };
 const LABELS={
   es:{title:"Replay 3D profesional",help:"Jugadores y raquetas GLB · arrastra para girar la cámara",video:"Jugada 25–30 s",videoHits:"FINAL · 25–30 S",lata:"Lata",two:"Especial · 2",three:"Especial · 3",suncho:"Suncho",play:"Reproducir",replay:"Repetir",against:"PUNTO EN CONTRA",points:"PUNTOS",loading:"CARGANDO GLB",unavailable:"WEBGL NO DISPONIBLE"},
@@ -50,8 +50,8 @@ export default function Fronton3D({lang}:{lang:Lang}){
     try{
       const renderer=new THREE.WebGLRenderer({canvas:node,antialias:true,powerPreference:"high-performance"});
       renderer.setPixelRatio(Math.min(1.6,window.devicePixelRatio||1));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
-      const scene=new THREE.Scene();scene.background=new THREE.Color(0x06131c);scene.fog=new THREE.Fog(0x06131c,20,42);
-      const camera=new THREE.PerspectiveCamera(42,1,.04,80);buildCourt(scene);
+      const scene=new THREE.Scene();scene.background=new THREE.Color(0x06131c);scene.fog=new THREE.Fog(0x06131c,28,60);
+      const camera=new THREE.PerspectiveCamera(42,1,.04,100);buildCourt(scene);
       scene.add(new THREE.HemisphereLight(0xd9f4ff,0x15352d,2.1));
       const key=new THREE.DirectionalLight(0xffffff,4.2);key.position.set(-4,10,10);key.castShadow=true;key.shadow.mapSize.set(1024,1024);key.shadow.camera.left=-12;key.shadow.camera.right=12;key.shadow.camera.top=15;key.shadow.camera.bottom=-8;scene.add(key);
       const rim=new THREE.DirectionalLight(0x79bfff,2.5);rim.position.set(7,5,2);scene.add(rim);
@@ -83,22 +83,23 @@ export default function Fronton3D({lang}:{lang:Lang}){
 
   return <div className="fronton3d" ref={container}>
     <div className="fronton3dHead"><div><strong>{copy.title}</strong><small>{copy.help}</small></div><output className={scenario!=="video"&&shot.score==="against"?"against":""}>{engineError?copy.unavailable:status||(ready?"THREE.JS · GLB":copy.loading)}</output></div>
-    <div className="threeStage"><canvas ref={canvas} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={()=>{drag.current=null}} aria-label={copy.title}/><div className="threeBadge"><span>WEBGL</span><b>GLB</b><span>POSE MOTION</span><strong>↔ 0,30 M</strong></div></div>
+    <div className="threeStage"><canvas ref={canvas} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={()=>{drag.current=null}} aria-label={copy.title}/><div className="threeBadge"><span>WEBGL</span><b>GLB</b><span>POSE MOTION</span><span>GRADE 0,50 M</span><strong>↔ 0,30 M</strong></div></div>
     <div className="fronton3dControls"><div className="scenarioButtons"><button className={scenario==="video"?"on video":"video"} onClick={()=>choose("video")}>▶ {copy.video}</button><button className={scenario==="lata"?"on":""} onClick={()=>choose("lata")}>{copy.lata}</button><button className={scenario==="special2"?"on":""} onClick={()=>choose("special2")}>{copy.two}</button><button className={scenario==="special3"?"on":""} onClick={()=>choose("special3")}>{copy.three}</button><button className={scenario==="suncho"?"on":""} onClick={()=>choose("suncho")}>{copy.suncho}</button></div><button className="play3d" disabled={!ready||engineError} onClick={start}>▶ {run?copy.replay:copy.play}</button></div>
   </div>
 }
 
 function buildCourt(scene:THREE.Scene){
-  const floor=plane(10,18,0x174b43);floor.rotation.x=-Math.PI/2;floor.position.set(0,0,9);floor.receiveShadow=true;scene.add(floor);
-  const front=plane(10,5.5,0x164d42);front.position.set(0,2.75,0);front.receiveShadow=true;scene.add(front);
+  const floor=plane(5,25,0x174b43);floor.rotation.x=-Math.PI/2;floor.position.set(0,0,12.5);floor.receiveShadow=true;scene.add(floor);
+  const front=plane(5,12,0x164d42);front.position.set(0,6,0);front.receiveShadow=true;scene.add(front);
   const sideMaterial=new THREE.MeshStandardMaterial({color:0x0d3838,transparent:true,opacity:.56,side:THREE.DoubleSide,roughness:.85});
-  for(const x of [-5,5]){const wall=new THREE.Mesh(new THREE.PlaneGeometry(18,5.5),sideMaterial);wall.rotation.y=x<0?Math.PI/2:-Math.PI/2;wall.position.set(x,2.75,9);wall.receiveShadow=true;scene.add(wall)}
-  scene.add(box(10,.3,.08,0x8a3232,[0,.15,.045]),box(10,.3,.065,0xd99024,[0,.45,.04]),box(10,.055,.095,0xdbe4e7,[0,.627,.055]));
-  for(const z of [6,12]){scene.add(box(10,.018,.035,z===6?0xf9d74a:0x62b7ff,[0,.018,z]));for(const x of [-4.97,4.97])scene.add(box(.035,5.5,.035,z===6?0xf9d74a:0x62b7ff,[x,2.75,z]))}
-  scene.add(labelSprite("FRONTIS",0xdce9e5,[0,5.05,.08],.65),labelSprite("LATA",0xffffff,[-3.9,.16,.11],.38),labelSprite("2 / 3",0x171d1d,[3.6,.47,.11],.38),labelSprite("SUNCHO",0x10191a,[-3.7,.7,.11],.38));
-  for(let z=1;z<18;z+=1){const tick=box(z%3===0?.24:.12,.012,.025,0xffffff,[0,.012,z]),material=tick.material as THREE.MeshStandardMaterial;material.transparent=true;material.opacity=.25;scene.add(tick)}
+  for(const x of [-2.5,2.5]){const wall=sideWall(x,sideMaterial);wall.receiveShadow=true;scene.add(wall)}
+  scene.add(box(5,.3,.08,0x8a3232,[0,.15,.045]),box(5,.3,.065,0xd99024,[0,.45,.04]),box(5,.055,.095,0xdbe4e7,[0,.627,.055]));
+  scene.add(labelSprite("FRONTIS",0xdce9e5,[0,11.2,.08],.65),labelSprite("LATA",0xffffff,[-1.72,.16,.11],.34),labelSprite("2 / 3",0x171d1d,[1.72,.47,.11],.34),labelSprite("SUNCHO",0x10191a,[-1.65,.72,.11],.34));
+  scene.add(courtGrid("floor"),courtGrid("front"),courtGrid("side",-2.488),courtGrid("side",2.488));
 }
 function plane(width:number,height:number,color:number){return new THREE.Mesh(new THREE.PlaneGeometry(width,height),new THREE.MeshStandardMaterial({color,roughness:.88,metalness:.02,side:THREE.DoubleSide}))}
+function sideWall(x:number,material:THREE.Material){const geometry=new THREE.BufferGeometry();geometry.setAttribute("position",new THREE.Float32BufferAttribute([x,0,0,x,0,25,x,12,5,x,12,0],3));geometry.setIndex([0,1,2,0,2,3]);geometry.computeVertexNormals();return new THREE.Mesh(geometry,material)}
+function courtGrid(surface:"floor"|"front"|"side",sideX=0){const points:number[]=[];if(surface==="floor"){for(let i=0;i<=10;i++){const x=-2.5+i*.5;points.push(x,.012,0,x,.012,25)}for(let i=0;i<=50;i++){const z=i*.5;points.push(-2.5,.012,z,2.5,.012,z)}}else if(surface==="front"){for(let i=0;i<=10;i++){const x=-2.5+i*.5;points.push(x,0,.052,x,12,.052)}for(let i=0;i<=24;i++){const y=i*.5;points.push(-2.5,y,.052,2.5,y,.052)}}else{for(let i=0;i<=50;i++){const z=i*.5,height=z<=5?12:12*(25-z)/20;points.push(sideX,0,z,sideX,height,z)}for(let i=0;i<=24;i++){const y=i*.5,zMax=25-20*y/12;points.push(sideX,y,0,sideX,y,zMax)}}const geometry=new THREE.BufferGeometry();geometry.setAttribute("position",new THREE.Float32BufferAttribute(points,3));const lines=new THREE.LineSegments(geometry,new THREE.LineBasicMaterial({color:0xe7fff8,transparent:true,opacity:.18,depthWrite:false}));lines.renderOrder=2;return lines}
 function box(width:number,height:number,depth:number,color:number,position:V3){const item=new THREE.Mesh(new THREE.BoxGeometry(width,height,depth),new THREE.MeshStandardMaterial({color,roughness:.65,metalness:height<.1?.65:.05}));item.position.set(...position);item.receiveShadow=true;return item}
 function labelSprite(text:string,color:number,position:V3,scale:number){const canvas=document.createElement("canvas");canvas.width=512;canvas.height=128;const x=canvas.getContext("2d")!;x.font="900 58px Arial";x.textAlign="center";x.textBaseline="middle";x.fillStyle=`#${color.toString(16).padStart(6,"0")}`;x.fillText(text,256,64);const map=new THREE.CanvasTexture(canvas);map.colorSpace=THREE.SRGBColorSpace;const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map,transparent:true,depthTest:false}));sprite.position.set(...position);sprite.scale.set(4*scale,scale,1);sprite.renderOrder=5;return sprite}
 function eventRing(color:number){const ring=new THREE.Mesh(new THREE.TorusGeometry(.22,.025,10,30),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.95,depthTest:false}));ring.visible=false;ring.renderOrder=4;return ring}
@@ -117,15 +118,15 @@ function placeShoe(object:THREE.Object3D|undefined,point:V3){if(!object)return;o
 function placeSegment(object:THREE.Object3D|undefined,a:V3,b:V3,baseHeight=1,width=1){if(!object)return;const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),direction=end.clone().sub(start),length=Math.max(.04,direction.length());object.position.copy(start.add(end).multiplyScalar(.5));object.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction.normalize());object.scale.set(width,length/baseHeight,width)}
 function setUniform(player:Player3D,color:number){for(const name of ["Torso","UpperArmL","UpperArmR"]){const mesh=player.parts[name] as THREE.Mesh|undefined;if(mesh)(mesh.material as THREE.MeshStandardMaterial).color.setHex(color)}}
 function setRing(ring:THREE.Mesh,position:V3,floor:boolean){ring.position.set(...position);ring.rotation.set(floor?-Math.PI/2:0,0,0);ring.scale.setScalar(1)}
-function updateCamera(runtime:Runtime,yaw:number,scenario:Scenario,time:number){const zoom=scenario==="video"?videoZoom(time):0,ball=scenario==="video"?videoBallPosition(time):[0,.43,.12] as V3,target=new THREE.Vector3(lerp(0,ball[0],zoom),lerp(2.25,ball[1],zoom),lerp(8,ball[2],zoom)),radius=lerp(24,.52,zoom),pitch=lerp(.34,.08,zoom),angle=lerp(yaw,.08,zoom);runtime.camera.position.set(target.x+Math.sin(angle)*Math.cos(pitch)*radius,target.y+Math.sin(pitch)*radius,target.z+Math.cos(angle)*Math.cos(pitch)*radius);runtime.camera.lookAt(target)}
+function updateCamera(runtime:Runtime,yaw:number,scenario:Scenario,time:number){const zoom=scenario==="video"?videoZoom(time):0,ball=scenario==="video"?videoBallPosition(time):[0,.43,.12] as V3,target=new THREE.Vector3(lerp(0,ball[0],zoom),lerp(5,ball[1],zoom),lerp(12.5,ball[2],zoom)),radius=lerp(32,.52,zoom),pitch=lerp(.34,.08,zoom),angle=lerp(yaw,.08,zoom);runtime.camera.position.set(target.x+Math.sin(angle)*Math.cos(pitch)*radius,target.y+Math.sin(pitch)*radius,target.z+Math.cos(angle)*Math.cos(pitch)*radius);runtime.camera.lookAt(target)}
 function resize(runtime:Runtime,node:HTMLCanvasElement){const box=node.getBoundingClientRect(),width=Math.max(1,box.width),height=Math.max(1,box.height);runtime.renderer.setSize(width,height,false);runtime.camera.aspect=width/height;runtime.camera.updateProjectionMatrix()}
 
 function poseSample(time:number,player:number){const scaled=clamp(time,0,.9999)*(POSE_FRAMES.length-1),index=Math.floor(scaled),mix=scaled-index,a=POSE_FRAMES[index]?.p[player],b=POSE_FRAMES[Math.min(POSE_FRAMES.length-1,index+1)]?.p[player]??a;return{a,b,mix}}
-function poseBase(time:number,player:number):V3{const {a,b,mix}=poseSample(time,player),points=a?.k??[],next=b?.k??points,hipX=lerp(((points[11]?.[0]??.5)+(points[12]?.[0]??.5))/2,((next[11]?.[0]??.5)+(next[12]?.[0]??.5))/2,mix),ankleY=lerp(Math.max(points[15]?.[1]??.7,points[16]?.[1]??.7),Math.max(next[15]?.[1]??.7,next[16]?.[1]??.7),mix);return[clamp((hipX-.5)*10,-4.3,4.3),0,clamp((ankleY-.34)/.44*18,1.2,17)]}
+function poseBase(time:number,player:number):V3{const {a,b,mix}=poseSample(time,player),points=a?.k??[],next=b?.k??points,hipX=lerp(((points[11]?.[0]??.5)+(points[12]?.[0]??.5))/2,((next[11]?.[0]??.5)+(next[12]?.[0]??.5))/2,mix),ankleY=lerp(Math.max(points[15]?.[1]??.7,points[16]?.[1]??.7),Math.max(next[15]?.[1]??.7,next[16]?.[1]??.7),mix);return[clamp((hipX-.5)*5,-2.15,2.15),0,clamp((ankleY-.34)/.44*25,1.2,24)]}
 function poseJoints(time:number,player:number):V3[]{const {a,b,mix}=poseSample(time,player),points=a?.k??[],next=b?.k??points,base=poseBase(time,player),hipY=lerp(((points[11]?.[1]??.55)+(points[12]?.[1]??.55))/2,((next[11]?.[1]??.55)+(next[12]?.[1]??.55))/2,mix),hipX=lerp(((points[11]?.[0]??.5)+(points[12]?.[0]??.5))/2,((next[11]?.[0]??.5)+(next[12]?.[0]??.5))/2,mix),ankleY=lerp(Math.max(points[15]?.[1]??.7,points[16]?.[1]??.7),Math.max(next[15]?.[1]??.7,next[16]?.[1]??.7),mix),height=Math.max(.12,ankleY-lerp(points[0]?.[1]??.3,next[0]?.[1]??.3,mix)),depth=[0,0,0,0,0,.04,-.04,.07,-.07,.1,-.1,.035,-.035,.03,-.03,.02,-.02];return Array.from({length:17},(_,index)=>{const px=lerp(points[index]?.[0]??hipX,next[index]?.[0]??hipX,mix),py=lerp(points[index]?.[1]??hipY,next[index]?.[1]??hipY,mix);return[base[0]+(px-hipX)/height*1.75,Math.max(.03,(ankleY-py)/height*1.75),base[2]+depth[index]] as V3})}
 function poseRacketGeometry(time:number,player:number){return poseRacketFromJoints(poseJoints(time,player))}
 function poseRacketFromJoints(joints:V3[]){const left=Math.hypot(joints[9][0]-joints[5][0],joints[9][1]-joints[5][1]),right=Math.hypot(joints[10][0]-joints[6][0],joints[10][1]-joints[6][1]),wrist=left>right?9:10,elbow=left>right?7:8,hand=joints[wrist],arm=[hand[0]-joints[elbow][0],hand[1]-joints[elbow][1],hand[2]-joints[elbow][2]] as V3,length=Math.hypot(...arm)||1,head=[hand[0]+arm[0]/length*.69,hand[1]+arm[1]/length*.69,hand[2]+arm[2]/length*.69] as V3;return{hand,head}}
-function videoBallPosition(time:number):V3{const t=clamp(time,0,1);if(t<=.28)return arc(poseRacketGeometry(0,0).head,VIDEO_PLAY.impact,t/.28,1.35);if(t<=.62)return arc(VIDEO_PLAY.impact,VIDEO_PLAY.bounce1,(t-.28)/.34,.48);if(t<=.84)return arc(VIDEO_PLAY.bounce1,VIDEO_PLAY.bounce2,(t-.62)/.22,.14);return arc(VIDEO_PLAY.bounce2,[-4.67,.05,1],(t-.84)/.16,.08)}
+function videoBallPosition(time:number):V3{const t=clamp(time,0,1);if(t<=.28)return arc(poseRacketGeometry(0,0).head,VIDEO_PLAY.impact,t/.28,1.35);if(t<=.62)return arc(VIDEO_PLAY.impact,VIDEO_PLAY.bounce1,(t-.28)/.34,.48);if(t<=.84)return arc(VIDEO_PLAY.bounce1,VIDEO_PLAY.bounce2,(t-.62)/.22,.14);return arc(VIDEO_PLAY.bounce2,[-2.32,.05,1],(t-.84)/.16,.08)}
 function ballPosition(start:V3,impact:V3,time:number):V3{if(time<=.43)return arc(start,[impact[0],impact[1],.06],time/.43,2.3);return arc([impact[0],impact[1],.06],[-2.2,.08,11.5],clamp((time-.43)/.57,0,1),2.2)}
 function arc(a:V3,b:V3,t:number,height:number):V3{const ease=t*t*(3-2*t);return[lerp(a[0],b[0],ease),lerp(a[1],b[1],ease)+Math.sin(Math.PI*t)*height,lerp(a[2],b[2],ease)]}
 function videoZoom(time:number){if(time<.12)return 0;if(time<.24)return smooth((time-.12)/.12);if(time<.38)return 1;if(time<.54)return 1-smooth((time-.38)/.16);return 0}
