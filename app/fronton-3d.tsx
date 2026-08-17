@@ -6,6 +6,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { REAL_POSE_FRAMES } from "./real-pose-data";
 
 type Lang = "es" | "pt";
+type Mode = "replay" | "training";
 type ScoringScenario = "lata" | "special2" | "special3" | "suncho";
 type Scenario = "video" | ScoringScenario;
 type V3 = [number, number, number];
@@ -14,6 +15,10 @@ type PoseDetection = { k:readonly PoseKeypoint[] };
 type Shot = {strike:V3;impact:V3;score:"against"|"1"|"2"|"3";metal:boolean};
 type Player3D = {root:THREE.Group;parts:Record<string,THREE.Object3D>;racket:THREE.Group};
 type Runtime = {renderer:THREE.WebGLRenderer;scene:THREE.Scene;camera:THREE.PerspectiveCamera;players:Player3D[];ball:THREE.Mesh;trail:THREE.Line;impact:THREE.Mesh;bounce1:THREE.Mesh;bounce2:THREE.Mesh;ready:boolean};
+type TrainingSettings = {power:number;direction:number;height:number;inclination:number;distance:number};
+type TrainingContact = {time:number;position:V3;kind:string;color:number;label:string};
+type TrainingSample = {time:number;position:V3};
+type TrainingPath = {samples:TrainingSample[];contacts:TrainingContact[];duration:number;strike:V3};
 
 const POSE_FRAMES=REAL_POSE_FRAMES as unknown as readonly {t:number;p:readonly PoseDetection[]}[];
 const SCENARIOS:Record<ScoringScenario,Shot>={
@@ -27,22 +32,28 @@ const VIDEO_PLAY={
   bounce1:[-2.32,.05,.52] as V3,
   bounce2:[-2.32,.05,.82] as V3,
 };
+const DEFAULT_TRAINING:TrainingSettings={power:22,direction:-12,height:1.15,inclination:9,distance:12};
 const LABELS={
-  es:{title:"Replay 3D profesional",help:"Jugadores y raquetas GLB · arrastra para girar la cámara",video:"Jugada 25–30 s",videoHits:"FINAL · 25–30 S",lata:"Lata",two:"Especial · 2",three:"Especial · 3",suncho:"Suncho",play:"Reproducir",replay:"Repetir",against:"PUNTO EN CONTRA",points:"PUNTOS",loading:"CARGANDO GLB",unavailable:"WEBGL NO DISPONIBLE"},
-  pt:{title:"Replay 3D profissional",help:"Jogadores e raquetes GLB · arraste para girar a câmera",video:"Lance 25–30 s",videoHits:"FINAL · 25–30 S",lata:"Lata",two:"Especial · 2",three:"Especial · 3",suncho:"Suncho",play:"Reproduzir",replay:"Repetir",against:"PONTO CONTRA",points:"PONTOS",loading:"CARREGANDO GLB",unavailable:"WEBGL INDISPONÍVEL"},
+  es:{title:"Replay 3D profesional",help:"Jugadores y raquetas GLB · arrastra para girar la cámara",trainingTitle:"Laboratorio 3D de jugadas",trainingHelp:"Ajusta el golpe y prueba una trayectoria posible en la cancha real",trainingNote:"Modelo aproximado: todavía no incluye viento, efecto de giro ni desgaste de la pelota.",video:"Jugada 25–30 s",videoHits:"FINAL · 25–30 S",lata:"Lata",two:"Especial · 2",three:"Especial · 3",suncho:"Suncho",play:"Reproducir",replay:"Repetir",simulate:"Probar jugada",power:"Potencia",direction:"Dirección",height:"Altura de raqueta",inclination:"Inclinación",distance:"Distancia al frontis",against:"PUNTO EN CONTRA",points:"PUNTOS",loading:"CARGANDO GLB",unavailable:"WEBGL NO DISPONIBLE"},
+  pt:{title:"Replay 3D profissional",help:"Jogadores e raquetes GLB · arraste para girar a câmera",trainingTitle:"Laboratório 3D de lances",trainingHelp:"Ajuste a batida e teste uma trajetória possível na quadra real",trainingNote:"Modelo aproximado: ainda não considera vento, efeito de giro nem desgaste da bola.",video:"Lance 25–30 s",videoHits:"FINAL · 25–30 S",lata:"Lata",two:"Especial · 2",three:"Especial · 3",suncho:"Suncho",play:"Reproduzir",replay:"Repetir",simulate:"Testar lance",power:"Potência",direction:"Direção",height:"Altura da raquete",inclination:"Inclinação",distance:"Distância ao frontis",against:"PONTO CONTRA",points:"PONTOS",loading:"CARREGANDO GLB",unavailable:"WEBGL INDISPONÍVEL"},
 };
 
-export default function Fronton3D({lang}:{lang:Lang}){
+export default function Fronton3D({lang,mode="replay"}:{lang:Lang;mode?:Mode}){
   const container=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),runtime=useRef<Runtime|null>(null);
   const audio=useRef<AudioContext|null>(null),drag=useRef<{x:number;yaw:number}|null>(null),started=useRef(0),notified=useRef(false);
   const scenarioRef=useRef<Scenario>("video"),playingRef=useRef(false),yawRef=useRef(.56),runRef=useRef(0),langRef=useRef(lang);
+  const trainingRef=useRef<TrainingPath>(simulateTraining(DEFAULT_TRAINING)),contactRef=useRef(-1);
   const [scenario,setScenario]=useState<Scenario>("video"),[run,setRun]=useState(0),[yaw,setYaw]=useState(.56),[playing,setPlaying]=useState(false),[status,setStatus]=useState(""),[ready,setReady]=useState(false),[engineError,setEngineError]=useState(false);
+  const [settings,setSettings]=useState(DEFAULT_TRAINING);
+  const training=mode==="training";
   const copy=LABELS[lang],shot=SCENARIOS[scenario==="video"?"special3":scenario];
   useEffect(()=>{scenarioRef.current=scenario},[scenario]);
   useEffect(()=>{playingRef.current=playing},[playing]);
   useEffect(()=>{yawRef.current=yaw},[yaw]);
   useEffect(()=>{runRef.current=run},[run]);
   useEffect(()=>{langRef.current=lang},[lang]);
+
+  function setting<K extends keyof TrainingSettings>(key:K,value:number){const next={...settings,[key]:value};setSettings(next);trainingRef.current=simulateTraining(next);playingRef.current=false;runRef.current=0;contactRef.current=-1;setPlaying(false);setRun(0);setStatus("")}
 
   useEffect(()=>{
     const node=canvas.current;if(!node)return;
@@ -65,34 +76,37 @@ export default function Fronton3D({lang}:{lang:Lang}){
       }).catch(()=>setEngineError(true));
       observer=new ResizeObserver(()=>resize(active,node));observer.observe(node);resize(active,node);
       const render=(now:number)=>{
-        const current=scenarioRef.current,isPlaying=playingRef.current,duration=current==="video"?9000:4200;
+        const current=scenarioRef.current,isPlaying=playingRef.current,duration=training?trainingRef.current.duration*1000:current==="video"?9000:4200;
         const elapsed=isPlaying?clamp((now-started.current)/duration,0,1):(runRef.current?1:0);
-        updateCamera(active,yawRef.current,current,elapsed);updateScene(active,current,elapsed);active.renderer.render(active.scene,active.camera);
-        if(isPlaying&&!notified.current&&((current==="video"&&elapsed>=.88)||(current!=="video"&&elapsed>=.43))){notified.current=true;const selected=SCENARIOS[current==="video"?"special2":current],labels=LABELS[langRef.current];setStatus(selected.score==="against"?labels.against:`${selected.score} ${labels.points}`);if(selected.metal)metalSound(audio.current)}
+        if(training){const contact=updateTrainingScene(active,trainingRef.current,elapsed);updateTrainingCamera(active,yawRef.current);if(contact!==contactRef.current){contactRef.current=contact;setStatus(contact<0?"":trainingRef.current.contacts[contact]?.label??"")}}
+        else{updateCamera(active,yawRef.current,current,elapsed);updateScene(active,current,elapsed)}active.renderer.render(active.scene,active.camera);
+        if(!training&&isPlaying&&!notified.current&&((current==="video"&&elapsed>=.88)||(current!=="video"&&elapsed>=.43))){notified.current=true;const selected=SCENARIOS[current==="video"?"special2":current],labels=LABELS[langRef.current];setStatus(selected.score==="against"?labels.against:`${selected.score} ${labels.points}`);if(selected.metal)metalSound(audio.current)}
         if(isPlaying&&elapsed>=1){playingRef.current=false;setPlaying(false)}frame=requestAnimationFrame(render);
       };frame=requestAnimationFrame(render);
     }catch{queueMicrotask(()=>setEngineError(true))}
     return()=>{disposed=true;if(frame)cancelAnimationFrame(frame);observer?.disconnect();if(runtime.current){disposeScene(runtime.current.scene);runtime.current.renderer.dispose();runtime.current=null}}
-  },[]);
+  },[training]);
 
-  function start(){if(!ready||engineError)return;if(!audio.current)audio.current=new AudioContext();audio.current.resume().catch(()=>{});if(scenario==="video")container.current?.requestFullscreen?.().catch(()=>{});started.current=performance.now();notified.current=false;playingRef.current=true;setStatus(scenario==="video"?copy.videoHits:"");setRun(value=>value+1);setPlaying(true)}
+  function start(){if(!ready||engineError)return;if(!audio.current)audio.current=new AudioContext();audio.current.resume().catch(()=>{});if(!training&&scenario==="video")container.current?.requestFullscreen?.().catch(()=>{});started.current=performance.now();notified.current=false;contactRef.current=-1;playingRef.current=true;setStatus(training?"":scenario==="video"?copy.videoHits:"");setRun(value=>value+1);setPlaying(true)}
   function choose(next:Scenario){scenarioRef.current=next;playingRef.current=false;runRef.current=0;setScenario(next);setPlaying(false);setRun(0);setStatus("")}
   function pointerDown(event:PointerEvent<HTMLCanvasElement>){event.currentTarget.setPointerCapture(event.pointerId);drag.current={x:event.clientX,yaw}}
   function pointerMove(event:PointerEvent<HTMLCanvasElement>){if(drag.current){const next=clamp(drag.current.yaw+(event.clientX-drag.current.x)/260,-1.05,1.05);yawRef.current=next;setYaw(next)}}
   function pointerUp(event:PointerEvent<HTMLCanvasElement>){event.currentTarget.releasePointerCapture(event.pointerId);drag.current=null}
 
   return <div className="fronton3d" ref={container}>
-    <div className="fronton3dHead"><div><strong>{copy.title}</strong><small>{copy.help}</small></div><output className={scenario!=="video"&&shot.score==="against"?"against":""}>{engineError?copy.unavailable:status||(ready?"THREE.JS · GLB":copy.loading)}</output></div>
+    <div className="fronton3dHead"><div><strong>{training?copy.trainingTitle:copy.title}</strong><small>{training?copy.trainingHelp:copy.help}</small></div><output className={!training&&scenario!=="video"&&shot.score==="against"?"against":""}>{engineError?copy.unavailable:status||(ready?"THREE.JS · GLB":copy.loading)}</output></div>
     <div className="threeStage"><canvas ref={canvas} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={()=>{drag.current=null}} aria-label={copy.title}/><div className="threeBadge"><span>WEBGL</span><b>GLB</b><span>POSE MOTION</span><span>GRADE 0,50 M</span><span>O1–O1334 · OVER 5 CM</span><strong>↔ 0,30 M</strong></div></div>
-    <div className="fronton3dControls"><div className="scenarioButtons"><button className={scenario==="video"?"on video":"video"} onClick={()=>choose("video")}>▶ {copy.video}</button><button className={scenario==="lata"?"on":""} onClick={()=>choose("lata")}>{copy.lata}</button><button className={scenario==="special2"?"on":""} onClick={()=>choose("special2")}>{copy.two}</button><button className={scenario==="special3"?"on":""} onClick={()=>choose("special3")}>{copy.three}</button><button className={scenario==="suncho"?"on":""} onClick={()=>choose("suncho")}>{copy.suncho}</button></div><button className="play3d" disabled={!ready||engineError} onClick={start}>▶ {run?copy.replay:copy.play}</button></div>
+    {training?<><div className="zoneLegend"><span className="zoneLeft">L · LEFT</span><span className="zoneRight">R · RIGHT</span><span className="zoneFront">F · FRONT</span><span className="zoneFloor">C · CEMENT</span><span className="zoneWrong">W · WRONG</span><span className="zoneAlmost">A · ALMOST</span><span className="zoneOver">O · OVER</span></div><div className="shotControls"><Range label={copy.power} value={settings.power} min={10} max={35} step={1} unit="m/s" onChange={value=>setting("power",value)}/><Range label={copy.direction} value={settings.direction} min={-35} max={35} step={1} unit="°" onChange={value=>setting("direction",value)}/><Range label={copy.height} value={settings.height} min={.4} max={2.2} step={.05} unit="m" onChange={value=>setting("height",value)}/><Range label={copy.inclination} value={settings.inclination} min={-10} max={35} step={1} unit="°" onChange={value=>setting("inclination",value)}/><Range label={copy.distance} value={settings.distance} min={3} max={24} step={.5} unit="m" onChange={value=>setting("distance",value)}/><button className="play3d" disabled={!ready||engineError} onClick={start}>▶ {run?copy.replay:copy.simulate}</button></div><small className="shotDisclaimer">{copy.trainingNote}</small></>:<div className="fronton3dControls"><div className="scenarioButtons"><button className={scenario==="video"?"on video":"video"} onClick={()=>choose("video")}>▶ {copy.video}</button><button className={scenario==="lata"?"on":""} onClick={()=>choose("lata")}>{copy.lata}</button><button className={scenario==="special2"?"on":""} onClick={()=>choose("special2")}>{copy.two}</button><button className={scenario==="special3"?"on":""} onClick={()=>choose("special3")}>{copy.three}</button><button className={scenario==="suncho"?"on":""} onClick={()=>choose("suncho")}>{copy.suncho}</button></div><button className="play3d" disabled={!ready||engineError} onClick={start}>▶ {run?copy.replay:copy.play}</button></div>}
   </div>
 }
 
+function Range({label,value,min,max,step,unit,onChange}:{label:string;value:number;min:number;max:number;step:number;unit:string;onChange:(value:number)=>void}){return <label className="shotRange"><span>{label}<b>{value.toFixed(step<1?2:0)} {unit}</b></span><input type="range" min={min} max={max} step={step} value={value} onChange={event=>onChange(Number(event.target.value))}/></label>}
+
 function buildCourt(scene:THREE.Scene){
-  const floor=plane(5,25,0x174b43);floor.rotation.x=-Math.PI/2;floor.position.set(0,0,12.5);floor.receiveShadow=true;scene.add(floor);
-  const front=plane(5,12,0x164d42);front.position.set(0,6,0);front.receiveShadow=true;scene.add(front);
-  const sideMaterial=new THREE.MeshStandardMaterial({color:0x0d3838,transparent:true,opacity:.56,side:THREE.DoubleSide,roughness:.85});
-  for(const x of [-2.5,2.5]){const wall=sideWall(x,sideMaterial);wall.receiveShadow=true;scene.add(wall)}
+  const floor=plane(5,25,0x245f4e);floor.rotation.x=-Math.PI/2;floor.position.set(0,0,12.5);floor.receiveShadow=true;scene.add(floor);
+  const front=plane(5,12,0x174f78);front.position.set(0,6,0);front.receiveShadow=true;scene.add(front);
+  const leftMaterial=new THREE.MeshStandardMaterial({color:0x563879,transparent:true,opacity:.68,side:THREE.DoubleSide,roughness:.85}),rightMaterial=new THREE.MeshStandardMaterial({color:0x15706b,transparent:true,opacity:.68,side:THREE.DoubleSide,roughness:.85});
+  for(const [x,material] of [[-2.5,leftMaterial],[2.5,rightMaterial]] as const){const wall=sideWall(x,material);wall.receiveShadow=true;scene.add(wall)}
   scene.add(box(5,.3,.08,0x8a3232,[0,.15,.045]),box(5,.3,.065,0xd99024,[0,.45,.04]),box(5,.055,.095,0xdbe4e7,[0,.627,.055]));
   addOverSector(scene);
   scene.add(labelSprite("FRONTIS",0xdce9e5,[0,11.2,.08],.65),labelSprite("O · OVER",0xffd9df,[0,11.72,.11],.36),labelSprite("LATA",0xffffff,[-1.72,.16,.11],.34),labelSprite("2 / 3",0x171d1d,[1.72,.47,.11],.34),labelSprite("SUNCHO",0x10191a,[-1.65,.72,.11],.34));
@@ -114,6 +128,14 @@ function updateScene(runtime:Runtime,scenario:Scenario,time:number){
   if(video&&runtime.players[1])runtime.players[1].root.visible=true;const ball=video?videoBallPosition(time):ballPosition(shot.strike,shot.impact,time);runtime.ball.position.set(...ball);
   const points:THREE.Vector3[]=[];for(let sample=Math.max(0,time-(video?.1:.18));sample<=time;sample+=(video?.01:.022)){const point=video?videoBallPosition(sample):ballPosition(shot.strike,shot.impact,sample);points.push(new THREE.Vector3(...point))}runtime.trail.geometry.dispose();runtime.trail.geometry=new THREE.BufferGeometry().setFromPoints(points);
 }
+function simulateTraining(settings:TrainingSettings):TrainingPath{const rad=Math.PI/180,azimuth=settings.direction*rad,elevation=settings.inclination*rad,speed=settings.power,strike:[number,number,number]=[0,settings.height,settings.distance],position=new THREE.Vector3(...strike),velocity=new THREE.Vector3(speed*Math.cos(elevation)*Math.sin(azimuth),speed*Math.sin(elevation),-speed*Math.cos(elevation)*Math.cos(azimuth)),samples:TrainingSample[]=[{time:0,position:[...strike]}],contacts:TrainingContact[]=[],dt=1/120;let time=0,lastKind="",lastTime=-1,floorHits=0,finished=false;const contact=(kind:string,color:number,label:string)=>{if(kind===lastKind&&time-lastTime<.1)return;lastKind=kind;lastTime=time;contacts.push({time,position:[position.x,position.y,position.z],kind,color,label});if(kind==="O"||contacts.length>=6)finished=true};for(let frame=1;frame<=720&&!finished;frame++){time+=dt;velocity.y-=9.81*dt;velocity.multiplyScalar(.9997);position.addScaledVector(velocity,dt);const sideHeight=position.z<=5?12:Math.max(0,12*(25-position.z)/20);if(position.z<=.1){position.z=.1;if(position.y>=11.95){contact("O",0xff4d76,"O · OVER")}else{velocity.z=Math.abs(velocity.z)*.82;if(position.y<=.3)contact("W",0xff4136,wrongCode(position));else if(position.y<=.6)contact("S",0xffad36,"ÁREA ESPECIAL");else if(position.y<=.65)contact("A",0xf3f6ff,almostCode(position));else contact("F",0x48a8ff,frontCode(position))}}if(!finished&&Math.abs(position.x)>=2.4){if(position.y>sideHeight){contact("O",0xff4d76,"O · OVER")}else{const left=position.x<0;position.x=left?-2.4:2.4;velocity.x=(left?Math.abs(velocity.x):-Math.abs(velocity.x))*.84;contact(left?"L":"R",left?0xad68ff:0x35dfd0,sideCode(left?"L":"R",position))}}if(!finished&&position.z>=24.9){position.z=24.9;contact("O",0xff4d76,"O · OVER")}if(!finished&&position.y<=.1){position.y=.1;velocity.y=Math.abs(velocity.y)*.7;floorHits++;contact("C",0x48d38a,floorCode(position));if(floorHits>=2)finished=true}if(frame%2===0)samples.push({time,position:[position.x,position.y,position.z]})}if(samples.at(-1)?.time!==time)samples.push({time,position:[position.x,position.y,position.z]});return{samples,contacts,duration:Math.max(1.2,time),strike}}
+function updateTrainingScene(runtime:Runtime,path:TrainingPath,progress:number){const current=progress*path.duration;let sampleIndex=0;while(sampleIndex<path.samples.length-1&&path.samples[sampleIndex+1].time<=current)sampleIndex++;const a=path.samples[sampleIndex],b=path.samples[Math.min(path.samples.length-1,sampleIndex+1)],mix=b.time===a.time?0:(current-a.time)/(b.time-a.time),position:V3=[lerp(a.position[0],b.position[0],mix),lerp(a.position[1],b.position[1],mix),lerp(a.position[2],b.position[2],mix)];runtime.ball.visible=true;runtime.ball.position.set(...position);const material=runtime.ball.material as THREE.MeshStandardMaterial;let contactIndex=-1;for(let index=0;index<path.contacts.length;index++)if(path.contacts[index].time<=current)contactIndex=index;const latest=path.contacts[contactIndex],flash=latest&&current-latest.time<.42,ballColor=flash?latest.color:0xd8ff54;material.color.setHex(ballColor);material.emissive.setHex(ballColor);material.emissiveIntensity=flash?3.8:1.25;(runtime.trail.material as THREE.LineBasicMaterial).color.setHex(flash?latest.color:0xc9ff36);const trailPoints=path.samples.slice(0,sampleIndex+1).filter((_,index)=>index%3===0).map(sample=>new THREE.Vector3(...sample.position));trailPoints.push(new THREE.Vector3(...position));runtime.trail.geometry.dispose();runtime.trail.geometry=new THREE.BufferGeometry().setFromPoints(trailPoints);const rings=[runtime.impact,runtime.bounce1,runtime.bounce2];rings.forEach((ring,index)=>{const hit=path.contacts[index];ring.visible=!!hit&&current>=hit.time;if(hit)setRing(ring,hit.position,hit.kind==="C"||hit.kind==="O"&&hit.position[1]<.2)});if(runtime.players[0]){const joints=poseJoints(.02,0),racket=poseRacketGeometry(.02,0),offset:V3=[path.strike[0]-racket.head[0],0,path.strike[2]-racket.head[2]];updatePlayer(runtime.players[0],joints,offset)}if(runtime.players[1])runtime.players[1].root.visible=false;return contactIndex}
+function updateTrainingCamera(runtime:Runtime,yaw:number){const target=new THREE.Vector3(0,3.4,10.5),radius=28,pitch=.3;runtime.camera.position.set(target.x+Math.sin(yaw)*Math.cos(pitch)*radius,target.y+Math.sin(pitch)*radius,target.z+Math.cos(yaw)*Math.cos(pitch)*radius);runtime.camera.lookAt(target)}
+function frontCode(point:THREE.Vector3){const column=clamp(Math.floor((point.x+2.5)/.5),0,9),row=clamp(Math.floor(point.y/.5),0,23);return`F${row*10+column+1}`}
+function floorCode(point:THREE.Vector3){const column=clamp(Math.floor((point.x+2.5)/.5),0,9),row=clamp(Math.floor(point.z/.5),0,49);return`C${row*10+column+1}`}
+function sideCode(prefix:"L"|"R",point:THREE.Vector3){const column=clamp(Math.floor(point.z/.5),0,49);let before=0;for(let index=0;index<column;index++){const z=index*.5,height=z<=5?12:12*(25-z)/20;before+=Math.ceil(height/.5-1e-9)}const row=clamp(Math.floor(point.y/.5),0,23);return`${prefix}${before+row+1}`}
+function wrongCode(point:THREE.Vector3){const column=clamp(Math.floor((point.x+2.5)/.05),0,99),row=clamp(Math.floor(point.y/.05),0,5);return`W${row*100+column+1}`}
+function almostCode(point:THREE.Vector3){const column=clamp(Math.floor((point.x+2.5)/.05),0,99);return`A${column+1}`}
 function updatePlayer(player:Player3D,joints:V3[],offset:V3=[0,0,0]){player.root.visible=true;const j=joints.map(point=>[point[0]+offset[0],point[1]+offset[1],point[2]+offset[2]] as V3),mid=(a:V3,b:V3):V3=>[(a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2],shoulders=mid(j[5],j[6]),hips=mid(j[11],j[12]);placePoint(player.parts.Head,j[0]);placePoint(player.parts.Hair,[j[0][0],j[0][1]+.035,j[0][2]]);placeSegment(player.parts.Torso,shoulders,hips,.96,1);placeSegment(player.parts.Hips,j[11],j[12],.66,.9);placeSegment(player.parts.UpperArmL,j[5],j[7]);placeSegment(player.parts.LowerArmL,j[7],j[9]);placePoint(player.parts.HandL,j[9]);placeSegment(player.parts.UpperArmR,j[6],j[8]);placeSegment(player.parts.LowerArmR,j[8],j[10]);placePoint(player.parts.HandR,j[10]);placeSegment(player.parts.UpperLegL,j[11],j[13]);placeSegment(player.parts.LowerLegL,j[13],j[15]);placeShoe(player.parts.ShoeL,j[15]);placeSegment(player.parts.UpperLegR,j[12],j[14]);placeSegment(player.parts.LowerLegR,j[14],j[16]);placeShoe(player.parts.ShoeR,j[16]);const racket=poseRacketFromJoints(j);player.racket.position.set(...racket.hand);player.racket.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(racket.head[0]-racket.hand[0],racket.head[1]-racket.hand[1],racket.head[2]-racket.hand[2]).normalize())}
 function placePoint(object:THREE.Object3D|undefined,point:V3){if(!object)return;object.position.set(...point);object.quaternion.identity();object.scale.setScalar(1)}
 function placeShoe(object:THREE.Object3D|undefined,point:V3){if(!object)return;object.position.set(point[0],.075,point[2]+.08);object.rotation.set(0,0,0);object.scale.set(1,1,1)}
