@@ -49,8 +49,17 @@ function monthKey(epochSeconds: number): string {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-async function accessIdentity(ctx: ExecutionContext): Promise<AccessIdentity | null> {
-  const identity = await ctx.access?.getIdentity();
+type RawAccessIdentity = {
+  email?: string;
+  name?: string;
+  user_uuid?: string;
+  iat?: number;
+  ip?: string;
+  geo?: { country?: string };
+  idp?: { type?: string };
+};
+
+function normalizeAccessIdentity(identity: RawAccessIdentity | undefined): AccessIdentity | null {
   const email = identity?.email?.trim().toLowerCase();
   const loginAt = Number(identity?.iat);
   const userId = identity?.user_uuid?.trim();
@@ -66,6 +75,34 @@ async function accessIdentity(ctx: ExecutionContext): Promise<AccessIdentity | n
     country: identity?.geo?.country?.trim().toUpperCase() || "",
     provider: identity?.idp?.type?.trim() || "cloudflare-access",
   };
+}
+
+function authorizationCookie(request: Request): string | null {
+  const cookies = request.headers.get("Cookie");
+  if (!cookies) return null;
+  const prefix = "CF_Authorization=";
+  const item = cookies.split(";").map((cookie) => cookie.trim()).find((cookie) => cookie.startsWith(prefix));
+  return item?.slice(prefix.length) || null;
+}
+
+async function accessIdentity(request: Request, env: Env, ctx: ExecutionContext): Promise<AccessIdentity | null> {
+  const runtimeIdentity = normalizeAccessIdentity(await ctx.access?.getIdentity());
+  if (runtimeIdentity) return runtimeIdentity;
+
+  // Hostname-based self-hosted Access applications may not populate ctx.access.
+  // The authenticated application cookie can still be exchanged for the same
+  // verified identity through Access's bounded get-identity endpoint.
+  const token = authorizationCookie(request);
+  if (!token) return null;
+
+  const response = await fetch(`https://${env.ACCESS_TEAM_DOMAIN}/cdn-cgi/access/get-identity`, {
+    headers: { Cookie: `CF_Authorization=${token}` },
+  });
+  if (!response.ok) return null;
+
+  const identity: unknown = await response.json();
+  if (!identity || typeof identity !== "object") return null;
+  return normalizeAccessIdentity(identity as RawAccessIdentity);
 }
 
 async function recordLogin(env: Env, identity: AccessIdentity): Promise<void> {
@@ -130,7 +167,7 @@ function summarizeUsers(sessions: LoginSession[]): AdminUser[] {
 
 async function adminResponse(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   if (request.method !== "GET") return json({ ok: false, error: "Método não permitido." }, 405);
-  const identity = await accessIdentity(ctx);
+  const identity = await accessIdentity(request, env, ctx);
   if (!identity) return json({ ok: false, error: "Sessão do Cloudflare Access não encontrada." }, 401);
   if (identity.email !== env.ADMIN_EMAIL.trim().toLowerCase()) {
     return json({ ok: false, error: "Acesso restrito ao administrador." }, 403);
@@ -179,12 +216,12 @@ const worker = {
     }
 
     if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) {
-      const identity = await accessIdentity(ctx);
+      const identity = await accessIdentity(request, env, ctx);
       if (!identity || identity.email !== env.ADMIN_EMAIL.trim().toLowerCase()) return forbiddenPage();
       ctx.waitUntil(recordLogin(env, identity));
     } else if (request.method === "GET" && request.headers.get("Accept")?.includes("text/html")) {
       ctx.waitUntil((async () => {
-        const identity = await accessIdentity(ctx);
+        const identity = await accessIdentity(request, env, ctx);
         if (identity) await recordLogin(env, identity);
       })());
     }
