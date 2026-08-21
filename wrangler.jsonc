@@ -16,7 +16,8 @@
     "enabled": true
   },
   "vars": {
-    "ADMIN_EMAIL": "vladi.acg@gmail.com"
+    "ADMIN_EMAIL": "vladi.acg@gmail.com",
+    "ACCESS_TEAM_DOMAIN": "tight-meadow-4867.cloudflareaccess.com"
   },
   "durable_objects": {
     "bindings": [

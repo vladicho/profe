@@ -3,6 +3,7 @@
 declare namespace Cloudflare {
   interface Env {
     ADMIN_EMAIL: string;
+    ACCESS_TEAM_DOMAIN: string;
     ASSETS: Fetcher;
     DB: D1Database;
     IMAGES: ImagesBinding;
