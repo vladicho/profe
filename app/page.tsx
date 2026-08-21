@@ -122,7 +122,7 @@ export default function Home() {
   useEffect(()=>()=>{if(src.startsWith("blob:"))URL.revokeObjectURL(src)},[src]);
   useEffect(()=>{const v=video.current;if(v&&liveStream){v.srcObject=liveStream;v.play().catch(()=>{})}return()=>{}},[liveStream,src]);
   useEffect(()=>()=>{liveStream?.getTracks().forEach(track=>track.stop())},[liveStream]);
-  useEffect(()=>{const saved=localStorage.getItem("profe-lang");if(saved==="pt"||saved==="es")setLang(saved)},[]);
+  useEffect(()=>{const timer=window.setTimeout(()=>{const saved=localStorage.getItem("profe-lang");if(saved==="pt"||saved==="es")setLang(saved)},0);return()=>window.clearTimeout(timer)},[]);
   function language(next:Lang){setLang(next);localStorage.setItem("profe-lang",next)}
 
   function upload(e:ChangeEvent<HTMLInputElement>){
@@ -229,8 +229,8 @@ export default function Home() {
       const n=[...court,p].slice(0,4);setCourt(n);
       if(n.length===4){setStage("ball");setMessage(c.ball)}
     } else if(stage==="ball"){
-      const v=video.current!,c=document.createElement("canvas");c.width=v.videoWidth;c.height=v.videoHeight;
-      const x=c.getContext("2d",{willReadFrequently:true})!;x.drawImage(v,0,0);
+      const v=video.current!,sampleCanvas=document.createElement("canvas");sampleCanvas.width=v.videoWidth;sampleCanvas.height=v.videoHeight;
+      const x=sampleCanvas.getContext("2d",{willReadFrequently:true})!;x.drawImage(v,0,0);
       const d=x.getImageData(Math.max(0,p.x-2),Math.max(0,p.y-2),5,5).data,s=[0,0,0];
       for(let i=0;i<d.length;i+=4){s[0]+=d[i];s[1]+=d[i+1];s[2]+=d[i+2]}
       setRgb(s.map(n=>n/25));setPath([p]);setStage("ready");setMessage(c.selected);
@@ -252,11 +252,11 @@ export default function Home() {
     let pose:PoseDetector|null=null;try{pose=await getPoseDetector()}catch{}
     if(liveStream){trackLive(pose);return}
     setStage("tracking");setMessage(c.tracing);v.pause();
-    const c=document.createElement("canvas");c.width=v.videoWidth;c.height=v.videoHeight;const x=c.getContext("2d",{willReadFrequently:true})!;
+    const trackCanvas=document.createElement("canvas");trackCanvas.width=v.videoWidth;trackCanvas.height=v.videoHeight;const x=trackCanvas.getContext("2d",{willReadFrequently:true})!;
     const pts=[...path],start=v.currentTime,end=Math.min(v.duration,selectedClip?.end??start+12);let frame=0;
     const step=()=>{
       if(v.currentTime>=end||v.ended){setPath([...pts]);setStage("done");setProgress(100);setMessage(c.complete);return}
-      x.drawImage(v,0,0);if(pose&&frame++%3===0)poses.current=pose.detectForVideo(v,Math.round(v.currentTime*1000)).landmarks;const found=find(x.getImageData(0,0,c.width,c.height),rgb,pts.at(-1)!,c.width,c.height);
+      x.drawImage(v,0,0);if(pose&&frame++%3===0)poses.current=pose.detectForVideo(v,Math.round(v.currentTime*1000)).landmarks;const found=find(x.getImageData(0,0,trackCanvas.width,trackCanvas.height),rgb,pts.at(-1)!,trackCanvas.width,trackCanvas.height);
       if(found)pts.push({...found,t:v.currentTime});setPath([...pts]);setProgress((v.currentTime-start)/Math.max(.1,end-start)*100);
       v.currentTime=Math.min(end,v.currentTime+1/24);timer.current=window.setTimeout(step,28);
     };step();

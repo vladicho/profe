@@ -14,5 +14,22 @@
   },
   "observability": {
     "enabled": true
-  }
+  },
+  "vars": {
+    "ADMIN_EMAIL": "vladi.acg@gmail.com"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "LOGIN_REGISTRY",
+        "class_name": "LoginRegistry"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["LoginRegistry"]
+    }
+  ]
 }
